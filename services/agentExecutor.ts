@@ -276,24 +276,6 @@ export class AgentExecutor {
       throw new Error(`Groq LLM failed: ${error.message}`);
     }
   }
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(`Groq API error: ${error.error?.message || response.statusText}`);
-      }
-
-      const result = await response.json();
-      const text = result.choices?.[0]?.message?.content || '';
-      
-      this.log(`   💬 Response: "${text.substring(0, 100)}${text.length > 100 ? '...' : ''}"`);
-      
-      return { output: text, outputType: 'text' };
-
-    } catch (error: any) {
-      throw new Error(`Groq LLM failed: ${error.message}`);
-    }
-  }
 
   // Execute TTS (Text-to-Speech) node
   private async executeTTS(node: AgentNode, textInput: string): Promise<{ output: Blob; outputType: 'audio' }> {

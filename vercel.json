@@ -18,12 +18,5 @@
       "src": "/(.*)",
       "dest": "/index.html"
     }
-  ],
-  "env": {
-    "VITE_ELEVENLABS_API_KEY": "@elevenlabs_api_key",
-    "VITE_TWILIO_ACCOUNT_SID": "@twilio_account_sid",
-    "VITE_TWILIO_AUTH_TOKEN": "@twilio_auth_token",
-    "VITE_TWILIO_PHONE_NUMBER": "@twilio_phone_number",
-    "VITE_BACKEND_URL": "@backend_url"
-  }
+  ]
 }

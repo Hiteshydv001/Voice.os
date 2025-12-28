@@ -183,20 +183,28 @@ app.post("/api/gemini/generate", async (req: Request, res: Response) => {
     return;
   }
   
-  const { prompt } = req.body;
+  const { prompt, model, temperature, systemPrompt } = req.body;
   if (!prompt) {
     res.status(400).json({ error: "Missing prompt" });
     return;
   }
 
   try {
+    const finalModel = model || 'gemini-2.5-flash';
+    const finalTemp = temperature !== undefined ? temperature : 0.7;
+    const textContent = systemPrompt ? `${systemPrompt}\n\nUser: ${prompt}` : prompt;
+
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${finalModel}:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
+          contents: [{ parts: [{ text: textContent }] }],
+          generationConfig: {
+            temperature: finalTemp,
+            maxOutputTokens: 2048,
+          },
         }),
       }
     );
@@ -209,6 +217,52 @@ app.post("/api/gemini/generate", async (req: Request, res: Response) => {
     res.json(data);
   } catch (error: any) {
     console.error("Gemini API error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============= Groq API Proxy =============
+app.post("/api/groq/chat", async (req: Request, res: Response) => {
+  const GROQ_API_KEY = process.env.GROQ_API_KEY || "";
+  
+  if (!GROQ_API_KEY) {
+    res.status(500).json({ error: "Groq API key not configured" });
+    return;
+  }
+  
+  const { messages, model, temperature } = req.body;
+  if (!messages) {
+    res.status(400).json({ error: "Missing messages" });
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      "https://api.groq.com/openai/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${GROQ_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: model || 'llama-3.3-70b-versatile',
+          messages,
+          temperature: temperature !== undefined ? temperature : 0.7,
+          max_tokens: 2048,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Groq API error: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    res.json(data);
+  } catch (error: any) {
+    console.error("Groq API error:", error);
     res.status(500).json({ error: error.message });
   }
 });

@@ -202,39 +202,25 @@ export class AgentExecutor {
 
   // Execute Gemini API
   private async executeGemini(config: LLMNodeConfig, input: string): Promise<{ output: string; outputType: 'text' }> {
-    const apiKey = APIKeyService.getGeminiKey();
-
-    if (!apiKey) {
-      throw new Error('Gemini API key not configured. Please add it in API Keys settings.');
-    }
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8081';
 
     try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  { text: config.systemPrompt ? `${config.systemPrompt}\n\nUser: ${input}` : input }
-                ]
-              }
-            ],
-            generationConfig: {
-              temperature: config.temperature,
-              maxOutputTokens: 2048,
-            },
-          }),
-        }
-      );
+      const response = await fetch(`${backendUrl}/api/gemini/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: input,
+          model: config.model,
+          temperature: config.temperature,
+          systemPrompt: config.systemPrompt,
+        }),
+      });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(`Gemini API error: ${error.error?.message || response.statusText}`);
+        throw new Error(error.error || 'Gemini API request failed');
       }
 
       const result = await response.json();
@@ -251,11 +237,7 @@ export class AgentExecutor {
 
   // Execute Groq API
   private async executeGroq(config: LLMNodeConfig, input: string): Promise<{ output: string; outputType: 'text' }> {
-    const apiKey = APIKeyService.getGroqKey();
-
-    if (!apiKey) {
-      throw new Error('Groq API key not configured. Please add it in API Keys settings.');
-    }
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8081';
 
     try {
       const messages: any[] = [];
@@ -266,18 +248,34 @@ export class AgentExecutor {
       
       messages.push({ role: 'user', content: input });
 
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      const response = await fetch(`${backendUrl}/api/groq/chat`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          messages,
           model: config.model,
-          messages: messages,
           temperature: config.temperature,
-          max_tokens: 2048,
         }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Groq API request failed');
+      }
+
+      const result = await response.json();
+      const text = result.choices?.[0]?.message?.content || '';
+      
+      this.log(`   💬 Response: "${text.substring(0, 100)}${text.length > 100 ? '...' : ''}"`);
+      
+      return { output: text, outputType: 'text' };
+
+    } catch (error: any) {
+      throw new Error(`Groq LLM failed: ${error.message}`);
+    }
+  }
       });
 
       if (!response.ok) {

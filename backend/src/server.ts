@@ -274,18 +274,22 @@ app.post("/api/elevenlabs/tts", async (req: Request, res: Response) => {
       return;
     }
 
-    // Forward the audio stream
-    res.setHeader("Content-Type", "audio/mpeg");
-    const reader = response.body?.getReader();
-    if (reader) {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        res.write(value);
-      }
-      res.end();
+    // Minimax returns JSON with base64 audio, not direct stream
+    const data = await response.json();
+    
+    if (data.data && data.data.audio) {
+      // Convert base64 to buffer
+      const audioBuffer = Buffer.from(data.data.audio, 'base64');
+      res.setHeader("Content-Type", "audio/mpeg");
+      res.send(audioBuffer);
+    } else if (data.extra_info && data.extra_info.audio_file) {
+      // Alternative: audio_file field
+      const audioBuffer = Buffer.from(data.extra_info.audio_file, 'base64');
+      res.setHeader("Content-Type", "audio/mpeg");
+      res.send(audioBuffer);
     } else {
-      res.status(503).json({ error: 'No response body from Minimax API' });
+      console.error("Minimax response missing audio data:", data);
+      res.status(503).json({ error: 'No audio data in Minimax response' });
     }
   } catch (error: any) {
     console.error("Minimax TTS error:", error);

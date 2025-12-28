@@ -20,6 +20,8 @@ const PUBLIC_URL = process.env.PUBLIC_URL || "";
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || "";
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || "";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY || "";
 
 if (!OPENAI_API_KEY) {
   console.error("OPENAI_API_KEY environment variable is required");
@@ -170,6 +172,122 @@ app.post("/api/twilio/call", async (req: Request, res: Response) => {
     res.json({ success: true, callSid: call.sid });
   } catch (error: any) {
     console.error("Error initiating call:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============= Gemini API Proxy =============
+app.post("/api/gemini/generate", async (req: Request, res: Response) => {
+  if (!GEMINI_API_KEY) {
+    res.status(500).json({ error: "Gemini API key not configured" });
+    return;
+  }
+  
+  const { prompt } = req.body;
+  if (!prompt) {
+    res.status(400).json({ error: "Missing prompt" });
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Gemini API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    res.json(data);
+  } catch (error: any) {
+    console.error("Gemini API error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============= ElevenLabs API Proxy =============
+app.get("/api/elevenlabs/voices", async (req: Request, res: Response) => {
+  if (!ELEVENLABS_API_KEY) {
+    res.status(500).json({ error: "ElevenLabs API key not configured" });
+    return;
+  }
+
+  try {
+    const response = await fetch("https://api.elevenlabs.io/v1/voices", {
+      headers: { "xi-api-key": ELEVENLABS_API_KEY },
+    });
+
+    if (!response.ok) {
+      throw new Error(`ElevenLabs API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    res.json(data);
+  } catch (error: any) {
+    console.error("ElevenLabs voices error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post("/api/elevenlabs/tts", async (req: Request, res: Response) => {
+  if (!ELEVENLABS_API_KEY) {
+    res.status(500).json({ error: "ElevenLabs API key not configured" });
+    return;
+  }
+
+  const { text, voiceId, modelId, voiceSettings } = req.body;
+  if (!text || !voiceId) {
+    res.status(400).json({ error: "Missing text or voiceId" });
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
+      {
+        method: "POST",
+        headers: {
+          "xi-api-key": ELEVENLABS_API_KEY,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          text,
+          model_id: modelId || "eleven_turbo_v2_5",
+          voice_settings: voiceSettings || {
+            stability: 0.5,
+            similarity_boost: 0.75,
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`ElevenLabs TTS error: ${response.status}`);
+    }
+
+    // Forward the audio stream
+    res.setHeader("Content-Type", "audio/mpeg");
+    const reader = response.body?.getReader();
+    if (reader) {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        res.write(value);
+      }
+      res.end();
+    } else {
+      res.status(500).json({ error: 'No response body' });
+    }
+  } catch (error: any) {
+    console.error("ElevenLabs TTS error:", error);
     res.status(500).json({ error: error.message });
   }
 });

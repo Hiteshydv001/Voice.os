@@ -1,14 +1,6 @@
-import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { Agent, ChatMessage } from "../types";
 
-const getClient = () => {
-  // Get API key from Vite environment variables
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
-  if (!apiKey) {
-    console.warn("No Gemini API Key found in environment");
-  }
-  return new GoogleGenerativeAI(apiKey);
-};
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8081';
 
 export const generateAgentScript = async (
   name: string,
@@ -16,8 +8,6 @@ export const generateAgentScript = async (
   product: string,
   goal: string
 ) => {
-  const ai = getClient();
-  
   const prompt = `
     You are an expert sales script writer. Create a sales script for an AI voice agent.
     
@@ -34,24 +24,19 @@ export const generateAgentScript = async (
   `;
 
   try {
-    const model = ai.getGenerativeModel({ 
-      model: "gemini-2.5-flash",
-      generationConfig: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: SchemaType.OBJECT,
-          properties: {
-            opening: { type: SchemaType.STRING },
-            objectionHandling: { type: SchemaType.STRING },
-            closing: { type: SchemaType.STRING },
-          },
-        },
-      },
+    const response = await fetch(`${BACKEND_URL}/api/gemini/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt }),
     });
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    const text = response.text();
-    return JSON.parse(text || "{}");
+
+    if (!response.ok) {
+      throw new Error(`Backend API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+    return JSON.parse(text);
   } catch (error) {
     console.error("Failed to generate script:", error);
     // Fallback for demo purposes
@@ -68,8 +53,6 @@ export const chatWithAgent = async (
   history: ChatMessage[],
   userMessage: string
 ): Promise<string> => {
-  const ai = getClient();
-
   const conversationContext = history.map(msg => 
     `${msg.role === 'agent' ? 'Agent' : 'Customer'}: ${msg.text}`
   ).join('\n');
@@ -96,13 +79,19 @@ export const chatWithAgent = async (
   const fullPrompt = `${systemPrompt}\n\nConversation History:\n${conversationContext}\nCustomer: ${userMessage}\nAgent:`;
 
   try {
-    const model = ai.getGenerativeModel({ model: "gemini-2.5-flash" });
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
+    const response = await fetch(`${BACKEND_URL}/api/gemini/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: fullPrompt }),
     });
-    const response = result.response;
-    
-    return response.text() || "I didn't quite catch that, could you repeat?";
+
+    if (!response.ok) {
+      throw new Error(`Backend API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "I didn't quite catch that, could you repeat?";
+    return text;
   } catch (error) {
     console.error("Chat error:", error);
     return "I apologize, I'm having trouble connecting. Can you say that again?";

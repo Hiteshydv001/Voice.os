@@ -112,14 +112,32 @@ const CampaignManager: React.FC<CampaignManagerProps> = ({ agents, campaigns, le
     setNewCampaign({ name: '', agentId: '' });
   };
 
-  // Check if Twilio is configured
-  const isTwilioConfigured = React.useMemo(() => {
-    const accountSid = import.meta.env.VITE_TWILIO_ACCOUNT_SID;
-    const authToken = import.meta.env.VITE_TWILIO_AUTH_TOKEN;
-    const phoneNumber = import.meta.env.VITE_TWILIO_PHONE_NUMBER;
-    return accountSid && authToken && phoneNumber && 
-           accountSid !== 'your_twilio_account_sid' && 
-           authToken !== 'your_twilio_auth_token';
+  // Check if Twilio is configured via backend
+  const [isTwilioConfigured, setIsTwilioConfigured] = React.useState(false);
+  const [twilioPhoneNumber, setTwilioPhoneNumber] = React.useState('');
+
+  React.useEffect(() => {
+    const checkTwilio = async () => {
+      try {
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8081';
+        const response = await fetch(`${backendUrl}/api/twilio`);
+        const { credentialsSet } = await response.json();
+        setIsTwilioConfigured(credentialsSet);
+        
+        if (credentialsSet) {
+          // Get phone numbers from backend
+          const numbersResponse = await fetch(`${backendUrl}/api/twilio/numbers`);
+          const { numbers } = await numbersResponse.json();
+          if (numbers && numbers.length > 0) {
+            setTwilioPhoneNumber(numbers[0].phoneNumber);
+          }
+        }
+      } catch (error) {
+        console.warn('Could not check Twilio configuration', error);
+        setIsTwilioConfigured(false);
+      }
+    };
+    checkTwilio();
   }, []);
 
   return (
@@ -138,7 +156,7 @@ const CampaignManager: React.FC<CampaignManagerProps> = ({ agents, campaigns, le
             <>
               <p className="text-sm font-bold text-green-900 uppercase">🔊 Real Twilio Calls Enabled</p>
               <p className="text-xs text-green-800 mt-1">
-                Campaigns will make actual phone calls using Twilio. Phone: {import.meta.env.VITE_TWILIO_PHONE_NUMBER}
+                Campaigns will make actual phone calls using Twilio. {twilioPhoneNumber && `Phone: ${twilioPhoneNumber}`}
               </p>
             </>
           ) : (

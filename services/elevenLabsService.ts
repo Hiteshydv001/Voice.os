@@ -7,11 +7,10 @@
  * - Voice management (list, get details, delete)
  * - Streaming support
  * 
- * Note: Instant Voice Cloning is a paid feature and is currently unavailable in this student project.
+ * Note: All API calls are proxied through backend for security
  */
 
-const ELEVENLABS_API_KEY = import.meta.env.VITE_ELEVENLABS_API_KEY || '';
-const BASE_URL = 'https://api.elevenlabs.io/v1';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8081';
 
 // Available TTS models
 export const ELEVENLABS_MODELS = {
@@ -80,47 +79,31 @@ interface AddVoiceResponse {
 export const textToSpeech = async (
   options: TextToSpeechOptions
 ): Promise<TextToSpeechResponse> => {
-  if (!ELEVENLABS_API_KEY) {
-    console.error('ElevenLabs API key not found');
-    return { success: false, error: 'API key not configured' };
-  }
-
   try {
     // Use default voice if none specified (Rachel - pre-made voice)
     const voiceId = options.voiceId || '21m00Tcm4TlvDq8ikWAM';
     
-    const payload: any = {
-      text: options.text,
-      model_id: options.modelId || ELEVENLABS_MODELS.TURBO_V2_5,
-      voice_settings: options.voiceSettings || {
-        stability: 0.5,
-        similarity_boost: 0.75,
-        style: 0.0,
-        use_speaker_boost: true,
-      },
-    };
-
-    // Add optional parameters if provided
-    if (options.optimize_streaming_latency !== undefined) {
-      payload.optimize_streaming_latency = options.optimize_streaming_latency;
-    }
-    if (options.output_format) {
-      payload.output_format = options.output_format;
-    }
-    
-    const response = await fetch(`${BASE_URL}/text-to-speech/${voiceId}`, {
+    const response = await fetch(`${BACKEND_URL}/api/elevenlabs/tts`, {
       method: 'POST',
       headers: {
-        'Accept': 'audio/mpeg',
-        'xi-api-key': ELEVENLABS_API_KEY,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        text: options.text,
+        voiceId,
+        modelId: options.modelId || ELEVENLABS_MODELS.TURBO_V2_5,
+        voiceSettings: options.voiceSettings || {
+          stability: 0.5,
+          similarity_boost: 0.75,
+          style: 0.0,
+          use_speaker_boost: true,
+        },
+      }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('ElevenLabs API error:', errorText);
+      console.error('Backend TTS error:', errorText);
       
       if (response.status === 401) {
         throw new Error('Invalid API key or unauthorized access');
@@ -193,31 +176,22 @@ const DEFAULT_VOICES: Voice[] = [
  * Falls back to default voices if API key is invalid or rate limited
  */
 export const getVoices = async (): Promise<VoicesResponse> => {
-  if (!ELEVENLABS_API_KEY) {
-    console.warn('ElevenLabs API key not configured, using default voices');
-    return { success: true, voices: DEFAULT_VOICES };
-  }
-
   try {
-    const response = await fetch(`${BASE_URL}/voices`, {
-      headers: {
-        'xi-api-key': ELEVENLABS_API_KEY,
-      },
-    });
+    const response = await fetch(`${BACKEND_URL}/api/elevenlabs/voices`);
 
     if (!response.ok) {
       // If API call fails (401, 429, etc), fall back to default voices
-      console.warn(`ElevenLabs API error ${response.status}, using default voices`);
+      console.warn(`Backend API error ${response.status}, using default voices`);
       return { success: true, voices: DEFAULT_VOICES };
     }
 
     const data = await response.json();
     return {
       success: true,
-      voices: data.voices,
+      voices: data.voices || DEFAULT_VOICES,
     };
   } catch (error) {
-    console.warn('ElevenLabs get voices error, using default voices:', error);
+    console.warn('Backend API error, using default voices:', error);
     // Return default voices instead of failing
     return {
       success: true,

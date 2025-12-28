@@ -23,12 +23,14 @@ const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || "";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 const MINIMAX_API_KEY = process.env.MINIMAX_API_KEY || "";
 const GROQ_API_KEY = process.env.GROQ_API_KEY || "";
+const DEEPGRAM_API_KEY = process.env.DEEPGRAM_API_KEY || "";
 
 console.log("🔑 Environment variables loaded:");
 console.log("   OPENAI_API_KEY:", OPENAI_API_KEY ? "✅ Set" : "❌ Missing");
 console.log("   GEMINI_API_KEY:", GEMINI_API_KEY ? "✅ Set" : "❌ Missing");
 console.log("   MINIMAX_API_KEY:", MINIMAX_API_KEY ? "✅ Set" : "❌ Missing");
 console.log("   GROQ_API_KEY:", GROQ_API_KEY ? "✅ Set" : "❌ Missing");
+console.log("   DEEPGRAM_API_KEY:", DEEPGRAM_API_KEY ? "✅ Set" : "❌ Missing");
 console.log("   TWILIO_ACCOUNT_SID:", TWILIO_ACCOUNT_SID ? "✅ Set" : "❌ Missing");
 
 if (!OPENAI_API_KEY) {
@@ -180,6 +182,45 @@ app.post("/api/twilio/call", async (req: Request, res: Response) => {
     res.json({ success: true, callSid: call.sid });
   } catch (error: any) {
     console.error("Error initiating call:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============= Deepgram STT Proxy =============
+app.post("/api/deepgram/transcribe", async (req: Request, res: Response) => {
+  console.log("🔍 Deepgram endpoint hit - API key status:", DEEPGRAM_API_KEY ? "✅ Present" : "❌ Missing");
+  
+  if (!DEEPGRAM_API_KEY) {
+    console.error("❌ DEEPGRAM_API_KEY environment variable not set");
+    res.status(500).json({ error: "Deepgram API key not configured" });
+    return;
+  }
+
+  const { model, language } = req.body;
+  
+  try {
+    const response = await fetch(
+      `https://api.deepgram.com/v1/listen?model=${model || 'nova-2'}&language=${language || 'en-US'}`,
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Token ${DEEPGRAM_API_KEY}`,
+          "Content-Type": "audio/wav",
+        },
+        body: req.body.audio, // binary audio data
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Deepgram API error:", errorText);
+      throw new Error(`Deepgram API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    res.json(data);
+  } catch (error: any) {
+    console.error("Deepgram transcription error:", error);
     res.status(500).json({ error: error.message });
   }
 });

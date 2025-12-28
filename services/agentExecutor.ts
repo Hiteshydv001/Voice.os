@@ -131,11 +131,7 @@ export class AgentExecutor {
   // Execute STT (Speech-to-Text) node
   private async executeSTT(node: AgentNode, audioInput: Blob): Promise<{ output: string; outputType: 'text' }> {
     const config = node.data.config as STTNodeConfig;
-    const apiKey = APIKeyService.getDeepgramKey();
-
-    if (!apiKey) {
-      throw new Error('Deepgram API key not configured. Please add it in API Keys settings.');
-    }
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8081';
 
     this.log(`   🎤 Using Deepgram model: ${config.model}`);
     this.log(`   🌍 Language: ${config.language || 'en-US'}`);
@@ -156,18 +152,22 @@ export class AgentExecutor {
       
       const arrayBuffer = await audioInput.arrayBuffer();
       
-      // Call Deepgram API
-      const response = await fetch('https://api.deepgram.com/v1/listen', {
+      // Call backend Deepgram proxy
+      const response = await fetch(`${backendUrl}/api/deepgram/transcribe`, {
         method: 'POST',
         headers: {
-          'Authorization': `Token ${apiKey}`,
-          'Content-Type': 'audio/wav',
+          'Content-Type': 'application/json',
         },
-        body: arrayBuffer,
+        body: JSON.stringify({
+          audio: Array.from(new Uint8Array(arrayBuffer)),
+          model: config.model,
+          language: config.language || 'en-US',
+        }),
       });
 
       if (!response.ok) {
-        throw new Error(`Deepgram API error: ${response.statusText}`);
+        const error = await response.json();
+        throw new Error(error.error || 'Deepgram API request failed');
       }
 
       const result = await response.json();
@@ -298,46 +298,27 @@ export class AgentExecutor {
   // Execute TTS (Text-to-Speech) node
   private async executeTTS(node: AgentNode, textInput: string): Promise<{ output: Blob; outputType: 'audio' }> {
     const config = node.data.config as TTSNodeConfig;
-    const apiKey = APIKeyService.getElevenlabsKey();
-
-    if (!apiKey) {
-      throw new Error('ElevenLabs API key not configured. Please add it in API Keys settings.');
-    }
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8081';
 
     this.log(`   🔊 Voice: ${config.voice}`);
-    this.log(`   📦 Model: ${config.model || 'eleven_monolingual_v1'}`);
+    this.log(`   📦 Model: ${config.model || 'speech-02-turbo'}`);
     this.log(`   📝 Text length: ${textInput.length} characters`);
 
     try {
-      const response = await fetch(
-        `https://api.elevenlabs.io/v1/text-to-speech/${config.voice}`,
-        {
-          method: 'POST',
-          headers: {
-            'xi-api-key': apiKey,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            text: textInput,
-            model_id: config.model || 'eleven_monolingual_v1',
-            voice_settings: {
-              stability: 0.5,
-              similarity_boost: 0.75,
-            },
-          }),
-        }
-      );
+      const response = await fetch(`${backendUrl}/api/elevenlabs/tts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: textInput,
+          voice_id: config.voice,
+        }),
+      });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        let errorMessage = response.statusText;
-        try {
-          const errorJson = JSON.parse(errorText);
-          errorMessage = errorJson.detail?.message || errorJson.message || errorText;
-        } catch {
-          errorMessage = errorText || response.statusText;
-        }
-        throw new Error(`ElevenLabs API error (${response.status}): ${errorMessage}`);
+        const error = await response.json();
+        throw new Error(error.error || 'TTS request failed');
       }
 
       const audioBlob = await response.blob();

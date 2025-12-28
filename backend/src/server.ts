@@ -214,16 +214,16 @@ app.post("/api/gemini/generate", async (req: Request, res: Response) => {
 });
 
 // ============= Minimax TTS API Proxy =============
-// Minimax TTS Voices
+// Minimax TTS Voices (Official MiniMax voice IDs)
 const MINIMAX_VOICES = [
-  { voice_id: 'male-qn-qingse', name: 'Qingse (Male)', language: 'zh-CN', gender: 'MALE', category: 'chinese', description: 'Clear Chinese male voice' },
-  { voice_id: 'male-qn-jingying', name: 'Jingying (Male)', language: 'zh-CN', gender: 'MALE', category: 'chinese', description: 'Professional Chinese male voice' },
-  { voice_id: 'male-qn-badao', name: 'Badao (Male)', language: 'zh-CN', gender: 'MALE', category: 'chinese', description: 'Strong Chinese male voice' },
-  { voice_id: 'female-shaonv', name: 'Shaonv (Female)', language: 'zh-CN', gender: 'FEMALE', category: 'chinese', description: 'Young Chinese female voice' },
-  { voice_id: 'female-yujie', name: 'Yujie (Female)', language: 'zh-CN', gender: 'FEMALE', category: 'chinese', description: 'Mature Chinese female voice' },
-  { voice_id: 'female-chengshu', name: 'Chengshu (Female)', language: 'zh-CN', gender: 'FEMALE', category: 'chinese', description: 'Professional Chinese female voice' },
-  { voice_id: 'presenter_male', name: 'Presenter (Male)', language: 'en-US', gender: 'MALE', category: 'english', description: 'Professional English male presenter' },
-  { voice_id: 'presenter_female', name: 'Presenter (Female)', language: 'en-US', gender: 'FEMALE', category: 'english', description: 'Professional English female presenter' },
+  { voice_id: 'Calm_Woman', name: 'Calm Woman', language: 'en-US', gender: 'FEMALE', category: 'english', description: 'Calm female voice' },
+  { voice_id: 'Confident_Man', name: 'Confident Man', language: 'en-US', gender: 'MALE', category: 'english', description: 'Confident male voice' },
+  { voice_id: 'Energetic_Woman', name: 'Energetic Woman', language: 'en-US', gender: 'FEMALE', category: 'english', description: 'Energetic female voice' },
+  { voice_id: 'Professional_Man', name: 'Professional Man', language: 'en-US', gender: 'MALE', category: 'english', description: 'Professional male voice' },
+  { voice_id: 'Warm_Woman', name: 'Warm Woman', language: 'en-US', gender: 'FEMALE', category: 'english', description: 'Warm female voice' },
+  { voice_id: 'Serious_Man', name: 'Serious Man', language: 'en-US', gender: 'MALE', category: 'english', description: 'Serious male voice' },
+  { voice_id: 'Friendly_Woman', name: 'Friendly Woman', language: 'en-US', gender: 'FEMALE', category: 'english', description: 'Friendly female voice' },
+  { voice_id: 'Authoritative_Man', name: 'Authoritative Man', language: 'en-US', gender: 'MALE', category: 'english', description: 'Authoritative male voice' },
 ];
 
 app.get("/api/elevenlabs/voices", async (req: Request, res: Response) => {
@@ -246,17 +246,17 @@ app.post("/api/elevenlabs/tts", async (req: Request, res: Response) => {
   }
 
   try {
-    // Try MiniMax TTS with different authentication formats
+    // MiniMax TTS API - Official format from docs
     const response = await fetch(
       "https://api.minimax.chat/v1/t2a_v2",
       {
         method: "POST",
         headers: {
-          "Authorization": MINIMAX_API_KEY, // Some APIs don't use Bearer prefix
+          "Authorization": `Bearer ${MINIMAX_API_KEY}`, // Bearer prefix is MANDATORY
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "speech-01",
+          model: "speech-02-turbo", // Official MiniMax model
           text,
           voice_setting: {
             voice_id: voiceId
@@ -278,15 +278,15 @@ app.post("/api/elevenlabs/tts", async (req: Request, res: Response) => {
       return;
     }
 
-    // MiniMax returns JSON with base64 audio at response.audio.data
+    // MiniMax returns JSON with base64 audio at data.audio.data (per official docs)
     const data = await response.json();
     
-    // Log for debugging (can remove after confirmed working)
+    // Log for debugging
     console.log("Minimax API response structure:", JSON.stringify(data, null, 2));
     
-    // ✅ CORRECT: Extract base64 audio from response.audio.data
-    if (data.audio && data.audio.data) {
-      const audioBuffer = Buffer.from(data.audio.data, 'base64');
+    // Extract base64 audio from official response format: data.audio.data
+    if (data.data && data.data.audio && data.data.audio.data) {
+      const audioBuffer = Buffer.from(data.data.audio.data, 'base64');
       res.setHeader("Content-Type", "audio/wav");
       res.send(audioBuffer);
     } else {

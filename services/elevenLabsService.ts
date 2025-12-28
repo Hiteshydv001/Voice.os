@@ -148,12 +148,54 @@ export const textToSpeech = async (
   }
 };
 
+// Hardcoded default voices (public ElevenLabs voices that work without API key)
+const DEFAULT_VOICES: Voice[] = [
+  {
+    voice_id: '21m00Tcm4TlvDq8ikWAM',
+    name: 'Rachel',
+    category: 'premade',
+    description: 'Calm, clear American female voice',
+  },
+  {
+    voice_id: 'AZnzlk1XvdvUeBnXmlld',
+    name: 'Domi',
+    category: 'premade',
+    description: 'Confident American female voice',
+  },
+  {
+    voice_id: 'EXAVITQu4vr4xnSDxMaL',
+    name: 'Bella',
+    category: 'premade',
+    description: 'Soft American female voice',
+  },
+  {
+    voice_id: 'ErXwobaYiN019PkySvjV',
+    name: 'Antoni',
+    category: 'premade',
+    description: 'Well-rounded American male voice',
+  },
+  {
+    voice_id: 'MF3mGyEYCl7XYWbV9V6O',
+    name: 'Elli',
+    category: 'premade',
+    description: 'Emotional American female voice',
+  },
+  {
+    voice_id: 'TxGEqnHWrfWFTfGW9XjX',
+    name: 'Josh',
+    category: 'premade',
+    description: 'Deep American male voice',
+  },
+];
+
 /**
  * Get list of available voices
+ * Falls back to default voices if API key is invalid or rate limited
  */
 export const getVoices = async (): Promise<VoicesResponse> => {
   if (!ELEVENLABS_API_KEY) {
-    return { success: false, error: 'API key not configured' };
+    console.warn('ElevenLabs API key not configured, using default voices');
+    return { success: true, voices: DEFAULT_VOICES };
   }
 
   try {
@@ -164,7 +206,9 @@ export const getVoices = async (): Promise<VoicesResponse> => {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch voices: ${response.status}`);
+      // If API call fails (401, 429, etc), fall back to default voices
+      console.warn(`ElevenLabs API error ${response.status}, using default voices`);
+      return { success: true, voices: DEFAULT_VOICES };
     }
 
     const data = await response.json();
@@ -173,10 +217,11 @@ export const getVoices = async (): Promise<VoicesResponse> => {
       voices: data.voices,
     };
   } catch (error) {
-    console.error('ElevenLabs get voices error:', error);
+    console.warn('ElevenLabs get voices error, using default voices:', error);
+    // Return default voices instead of failing
     return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      success: true,
+      voices: DEFAULT_VOICES,
     };
   }
 };

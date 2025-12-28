@@ -78,18 +78,9 @@ export const makeOutboundCall = async (to: string, agentName: string, agentScrip
     }
   };
 
-  // Construct System Prompt
-  const _systemPrompt = `You are ${agentData.name}. ${agentData.goal}. Tone: ${agentData.tone}. 
-  Product/Context: ${agentData.productDescription}
-  
-  Script Guidelines:
-  - Opening: ${agentData.script.opening}
-  - Objection Handling: ${agentData.script.objectionHandling}
-  - Closing: ${agentData.script.closing}
-  
-  Keep your responses concise and conversational.`;
-
-  const _initialGreeting = agentData.script.opening;
+  // Construct System Prompt (for reference, not used in call)
+  // const systemPrompt = `You are ${agentData.name}...`;
+  // const initialGreeting = agentData.script.opening;
   
   // Backend endpoint handles TwiML generation and WebSocket stream
   // UPDATED: Pointing to OpenAI Realtime endpoint (Clean URL, no params)

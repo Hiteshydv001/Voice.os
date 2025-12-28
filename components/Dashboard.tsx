@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Phone, Users, CheckCircle, TrendingUp, Activity, PhoneOutgoing, X, Loader2, ShieldCheck, AlertTriangle, Coins, Plus } from 'lucide-react';
+import { Phone, Users, CheckCircle, TrendingUp, Activity, PhoneOutgoing, X, Loader2, AlertTriangle, Coins, Plus } from 'lucide-react';
 import { Agent, ActivityLog } from '../types';
 import { TWILIO_CONFIG } from '../config';
 import { makeOutboundCall } from '../services/twilioService';
@@ -323,7 +323,7 @@ const Dashboard: React.FC<DashboardProps> = ({ agents = [], logs = [], onAddLog 
                     <span>Waiting for input...</span>
                 </div>
             ) : (
-                logs.slice().reverse().map((log, idx) => (
+                logs.slice().reverse().map((log, _idx) => (
                 <div key={log.id} className="mb-3 pb-3 border-b border-stone-300 last:border-0">
                     <div className="flex items-center justify-between mb-1">
                         <span className="font-bold text-black">{log.time}</span>

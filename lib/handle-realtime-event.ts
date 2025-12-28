@@ -15,7 +15,8 @@ export default function handleRealtimeEvent(
 
   // Helper function to update an existing item if found by id, or add a new one if not.
   // We can also pass partial updates to reduce repetitive code.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // Commented out as it's currently unused
+  /*
   function updateOrAddItem(id: string, updates: Partial<Item>): void {
     setItems((prev) => {
       const idx = prev.findIndex((m) => m.id === id);
@@ -28,6 +29,7 @@ export default function handleRealtimeEvent(
       }
     });
   }
+  */
 
   const { type } = ev;
 

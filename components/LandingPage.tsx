@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Terminal, Play, Cpu, Globe, Zap, ArrowRight, ShieldCheck, 
-  MessageSquare, User, Check, Star, ChevronDown, ChevronUp,
-  Layout, Phone, Settings, Code, Upload, BarChart3, Radio
+  Terminal, Cpu, Globe, Zap, ArrowRight, ShieldCheck, 
+  Check, Star, ChevronDown, ChevronUp,
+  Phone, Code, Upload, BarChart3, Radio
 } from 'lucide-react';
 
 const LandingPage: React.FC = () => {

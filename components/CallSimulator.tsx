@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Phone, X, MessageSquare, Volume2, Terminal } from 'lucide-react';
+import { Mic, MicOff, X, Terminal } from 'lucide-react';
 import { Agent, ChatMessage } from '../types';
 import { chatWithAgent } from '../services/geminiService';
 

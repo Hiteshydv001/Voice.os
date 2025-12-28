@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { Terminal, AlertTriangle, ArrowRight, UserPlus, Database } from 'lucide-react';
+import { AlertTriangle, ArrowRight, UserPlus, Database } from 'lucide-react';
 
 const SignUp: React.FC = () => {
   const [email, setEmail] = useState('');

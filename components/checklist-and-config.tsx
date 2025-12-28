@@ -21,7 +21,7 @@ import {
 export default function ChecklistAndConfig({
   ready,
   setReady,
-  selectedPhoneNumber,
+  selectedPhoneNumber: _selectedPhoneNumber,
   setSelectedPhoneNumber,
 }: {
   ready: boolean;

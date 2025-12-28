@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Play, Pause, Phone, BarChart2, CheckCircle, Database, Upload } from 'lucide-react';
+import { Play, Phone, BarChart2, CheckCircle, Database, Upload } from 'lucide-react';
 import { Agent, Campaign, Lead } from '../types';
 
 interface CampaignManagerProps {

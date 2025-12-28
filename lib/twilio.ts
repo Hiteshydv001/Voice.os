@@ -9,6 +9,5 @@ if (!accountSid || !authToken) {
   console.warn("Twilio credentials not set. Twilio client will be disabled.");
 }
 
-export const twilioClient =
-  accountSid && authToken ? twilio(accountSid, authToken) : null;
+export const twilioClient = null; // Disabled in frontend
 export default twilioClient;

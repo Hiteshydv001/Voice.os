@@ -283,8 +283,12 @@ app.get("/api/elevenlabs/voices", async (req: Request, res: Response) => {
 });
 
 app.post("/api/elevenlabs/tts", async (req: Request, res: Response) => {
+  // TTS is not critical - disable if no API key
   if (!ELEVENLABS_API_KEY) {
-    res.status(500).json({ error: "ElevenLabs API key not configured" });
+    console.warn("ElevenLabs API key not configured - TTS unavailable");
+    res.status(503).json({ 
+      error: "Text-to-speech service is not available. ElevenLabs API key not configured." 
+    });
     return;
   }
 
@@ -315,7 +319,12 @@ app.post("/api/elevenlabs/tts", async (req: Request, res: Response) => {
     );
 
     if (!response.ok) {
-      throw new Error(`ElevenLabs TTS error: ${response.status}`);
+      // Log the error but return a graceful response
+      console.warn(`ElevenLabs TTS API error: ${response.status}`);
+      res.status(503).json({ 
+        error: `Text-to-speech service unavailable: ElevenLabs API returned ${response.status}. This feature requires a paid ElevenLabs subscription.` 
+      });
+      return;
     }
 
     // Forward the audio stream
@@ -329,11 +338,13 @@ app.post("/api/elevenlabs/tts", async (req: Request, res: Response) => {
       }
       res.end();
     } else {
-      res.status(500).json({ error: 'No response body' });
+      res.status(503).json({ error: 'No response body from ElevenLabs API' });
     }
   } catch (error: any) {
-    console.error("ElevenLabs TTS error:", error);
-    res.status(500).json({ error: error.message });
+    console.warn("ElevenLabs TTS error:", error);
+    res.status(503).json({ 
+      error: "Text-to-speech service unavailable. This feature may require a paid ElevenLabs subscription." 
+    });
   }
 });
 

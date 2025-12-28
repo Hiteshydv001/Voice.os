@@ -283,33 +283,27 @@ app.get("/api/elevenlabs/voices", async (req: Request, res: Response) => {
 });
 
 app.post("/api/elevenlabs/tts", async (req: Request, res: Response) => {
-  // TTS is not critical - disable if no API key
-  if (!ELEVENLABS_API_KEY) {
-    console.warn("ElevenLabs API key not configured - TTS unavailable");
-    res.status(503).json({ 
-      error: "Text-to-speech service is not available. ElevenLabs API key not configured." 
-    });
-    return;
-  }
-
   const { text, voiceId, modelId, voiceSettings } = req.body;
   if (!text || !voiceId) {
     res.status(400).json({ error: "Missing text or voiceId" });
     return;
   }
 
+  // OPTION 1: Use hardcoded voice_id directly WITHOUT API key check
+  // This works for public/premade voices even on free tier (sometimes)
   try {
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
       {
         method: "POST",
         headers: {
-          "xi-api-key": ELEVENLABS_API_KEY,
+          // Try without API key first for public voices
+          ...(ELEVENLABS_API_KEY ? { "xi-api-key": ELEVENLABS_API_KEY } : {}),
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           text,
-          model_id: modelId || "eleven_turbo_v2_5",
+          model_id: modelId || "eleven_monolingual_v1", // Use free tier model
           voice_settings: voiceSettings || {
             stability: 0.5,
             similarity_boost: 0.75,
@@ -320,9 +314,10 @@ app.post("/api/elevenlabs/tts", async (req: Request, res: Response) => {
 
     if (!response.ok) {
       // Log the error but return a graceful response
-      console.warn(`ElevenLabs TTS API error: ${response.status}`);
+      const errorText = await response.text();
+      console.warn(`ElevenLabs TTS API error: ${response.status} - ${errorText}`);
       res.status(503).json({ 
-        error: `Text-to-speech service unavailable: ElevenLabs API returned ${response.status}. This feature requires a paid ElevenLabs subscription.` 
+        error: `Text-to-speech service unavailable: ElevenLabs API returned ${response.status}. Try upgrading to ElevenLabs paid plan or use a different TTS service.` 
       });
       return;
     }

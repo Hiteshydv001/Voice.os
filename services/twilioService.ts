@@ -1,6 +1,6 @@
 import { TWILIO_CONFIG } from '../config';
 
-export const makeOutboundCall = async (to: string, agentName: string, agentScript?: { opening: string; closing: string; objectionHandling: string }) => {
+export const makeOutboundCall = async (to: string, agentName: string, _agentScript?: { opening: string; closing: string; objectionHandling: string }) => {
   const { accountSid, authToken, phoneNumber } = TWILIO_CONFIG;
 
   // Check if Twilio is configured

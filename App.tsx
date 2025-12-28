@@ -461,10 +461,6 @@ const AppContent: React.FC = () => {
             path="visual-builder" 
             element={<AgentBuilderPage />} 
           />
-          <Route 
-            path="demo" 
-            element={<CallInterface />} 
-          />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

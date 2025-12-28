@@ -81,22 +81,40 @@ app.get("/public-url", (req, res) => {
 });
 
 app.all("/twiml", (req, res) => {
-  const wsUrl = new URL(PUBLIC_URL);
-  wsUrl.protocol = "wss:";
-  wsUrl.pathname = `/call`;
+  try {
+    if (!PUBLIC_URL) {
+      console.error("PUBLIC_URL is not set");
+      return res.status(500).send("PUBLIC_URL environment variable is not configured");
+    }
+    const wsUrl = new URL(PUBLIC_URL);
+    wsUrl.protocol = "wss:";
+    wsUrl.pathname = `/call`;
 
-  const twimlContent = twimlTemplate.replace("{{WS_URL}}", wsUrl.toString());
-  res.type("text/xml").send(twimlContent);
+    const twimlContent = twimlTemplate.replace("{{WS_URL}}", wsUrl.toString());
+    res.type("text/xml").send(twimlContent);
+  } catch (error) {
+    console.error("Error generating TwiML:", error);
+    res.status(500).send("Error generating TwiML");
+  }
 });
 
 // Legacy route for backward compatibility
 app.all("/voice/openai/incoming", (req, res) => {
-  const wsUrl = new URL(PUBLIC_URL);
-  wsUrl.protocol = "wss:";
-  wsUrl.pathname = `/voice/openai/stream`;
+  try {
+    if (!PUBLIC_URL) {
+      console.error("PUBLIC_URL is not set");
+      return res.status(500).send("PUBLIC_URL environment variable is not configured");
+    }
+    const wsUrl = new URL(PUBLIC_URL);
+    wsUrl.protocol = "wss:";
+    wsUrl.pathname = `/voice/openai/stream`;
 
-  const twimlContent = twimlTemplate.replace("{{WS_URL}}", wsUrl.toString());
-  res.type("text/xml").send(twimlContent);
+    const twimlContent = twimlTemplate.replace("{{WS_URL}}", wsUrl.toString());
+    res.type("text/xml").send(twimlContent);
+  } catch (error) {
+    console.error("Error generating TwiML:", error);
+    res.status(500).send("Error generating TwiML");
+  }
 });
 
 // New endpoint to list available tools (schemas)

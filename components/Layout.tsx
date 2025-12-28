@@ -24,7 +24,6 @@ const Layout: React.FC = () => {
     { icon: Network, label: 'FLOW BUILDER', path: '/app/visual-builder' },
     { icon: Users, label: 'LEADS', path: '/app/leads' },
     { icon: PhoneOutgoing, label: 'CAMPAIGNS', path: '/app/campaigns' },
-    { icon: PhoneOutgoing, label: 'REALTIME DEMO', path: '/app/demo' },
   ];
 
   return (

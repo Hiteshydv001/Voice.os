@@ -246,9 +246,9 @@ app.post("/api/elevenlabs/tts", async (req: Request, res: Response) => {
   }
 
   try {
-    // MiniMax TTS API - Official format from docs
+    // MiniMax TTS API - International endpoint (for users outside China)
     const response = await fetch(
-      "https://api.minimax.chat/v1/t2a_v2",
+      "https://api.minimaxi.chat/v1/t2a_v2",
       {
         method: "POST",
         headers: {

@@ -20,9 +20,6 @@
     }
   ],
   "env": {
-    "VITE_GEMINI_API_KEY": "@gemini_api_key",
-    "VITE_GROQ_API_KEY": "@groq_api_key",
-    "VITE_DEEPGRAM_API_KEY": "@deepgram_api_key",
     "VITE_ELEVENLABS_API_KEY": "@elevenlabs_api_key",
     "VITE_TWILIO_ACCOUNT_SID": "@twilio_account_sid",
     "VITE_TWILIO_AUTH_TOKEN": "@twilio_auth_token",

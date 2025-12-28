@@ -80,11 +80,12 @@ app.get("/public-url", (req, res) => {
   res.json({ publicUrl: PUBLIC_URL });
 });
 
-app.all("/twiml", (req, res) => {
+app.post("/twiml", (req, res) => {
   try {
     if (!PUBLIC_URL) {
       console.error("PUBLIC_URL is not set");
-      return res.status(500).send("PUBLIC_URL environment variable is not configured");
+      res.status(500).send("PUBLIC_URL environment variable is not configured");
+      return;
     }
     const wsUrl = new URL(PUBLIC_URL);
     wsUrl.protocol = "wss:";
@@ -99,11 +100,12 @@ app.all("/twiml", (req, res) => {
 });
 
 // Legacy route for backward compatibility
-app.all("/voice/openai/incoming", (req, res) => {
+app.post("/voice/openai/incoming", (req, res) => {
   try {
     if (!PUBLIC_URL) {
       console.error("PUBLIC_URL is not set");
-      return res.status(500).send("PUBLIC_URL environment variable is not configured");
+      res.status(500).send("PUBLIC_URL environment variable is not configured");
+      return;
     }
     const wsUrl = new URL(PUBLIC_URL);
     wsUrl.protocol = "wss:";

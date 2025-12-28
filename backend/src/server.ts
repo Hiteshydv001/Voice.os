@@ -246,8 +246,9 @@ app.post("/api/elevenlabs/tts", async (req: Request, res: Response) => {
   }
 
   try {
+    // ✅ CORRECT MiniMax TTS endpoint (v1/t2a_v2)
     const response = await fetch(
-      "https://api.minimax.chat/v1/text_to_speech",
+      "https://api.minimax.chat/v1/t2a_v2",
       {
         method: "POST",
         headers: {
@@ -255,12 +256,15 @@ app.post("/api/elevenlabs/tts", async (req: Request, res: Response) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          model: "speech-01",
           text,
-          voice_id: voiceId,
-          model: "speech-01-turbo",
-          speed: 1.0,
-          vol: 1.0,
-          pitch: 0,
+          voice_setting: {
+            voice_id: voiceId
+          },
+          audio_setting: {
+            audio_format: "wav",
+            sample_rate: 24000
+          }
         }),
       }
     );
@@ -274,30 +278,16 @@ app.post("/api/elevenlabs/tts", async (req: Request, res: Response) => {
       return;
     }
 
-    // Minimax returns JSON with base64 audio, not direct stream
+    // MiniMax returns JSON with base64 audio at response.audio.data
     const data = await response.json();
     
-    // Log the full response structure for debugging
+    // Log for debugging (can remove after confirmed working)
     console.log("Minimax API response structure:", JSON.stringify(data, null, 2));
     
-    // Try different possible response formats
-    let audioBase64: string | null = null;
-    
-    if (data.data?.audio) {
-      audioBase64 = data.data.audio;
-    } else if (data.extra_info?.audio_file) {
-      audioBase64 = data.extra_info.audio_file;
-    } else if (data.audio) {
-      audioBase64 = data.audio;
-    } else if (data.base_resp?.status_code === 0 && data.data) {
-      // Minimax success format
-      audioBase64 = data.data.audio || data.data;
-    }
-    
-    if (audioBase64) {
-      // Convert base64 to buffer
-      const audioBuffer = Buffer.from(audioBase64, 'base64');
-      res.setHeader("Content-Type", "audio/mpeg");
+    // ✅ CORRECT: Extract base64 audio from response.audio.data
+    if (data.audio && data.audio.data) {
+      const audioBuffer = Buffer.from(data.audio.data, 'base64');
+      res.setHeader("Content-Type", "audio/wav");
       res.send(audioBuffer);
     } else {
       console.error("Minimax response missing audio data. Full response:", JSON.stringify(data));

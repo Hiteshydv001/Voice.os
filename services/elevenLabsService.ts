@@ -1,37 +1,24 @@
 /**
- * ElevenLabs Text-to-Speech Service
- * API Documentation: https://elevenlabs.io/docs
+ * Minimax Text-to-Speech Service
+ * API Documentation: https://www.minimaxi.com/document/guides/speech-model/T2A
  * 
  * Features:
- * - Text-to-Speech with multiple models
- * - Hardcoded public voices (no API call for voice list)
+ * - High-quality TTS with Chinese and English voices
+ * - Fast speech-01-turbo model
  * - Backend proxy for security
- * 
- * Note: All API calls are proxied through backend for security
  */
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8081';
 
-// Available TTS models
-export const ELEVENLABS_MODELS = {
-  TURBO_V2_5: 'eleven_turbo_v2_5',       // Fast & balanced - FREE TIER
-  FLASH_V2: 'eleven_flash_v2',             // Ultra-low latency - FREE TIER
-  MULTILINGUAL_V2: 'eleven_multilingual_v2', // Many languages - PAID
-} as const;
-
-export type ElevenLabsModel = typeof ELEVENLABS_MODELS[keyof typeof ELEVENLABS_MODELS];
-
 interface VoiceSettings {
-  stability: number;
-  similarity_boost: number;
-  style?: number;
-  use_speaker_boost?: boolean;
+  speed?: number;      // 0.5 to 2.0 (default: 1.0)
+  vol?: number;        // 0.1 to 10.0 (default: 1.0)
+  pitch?: number;      // -12 to 12 (default: 0)
 }
 
 interface TextToSpeechOptions {
   text: string;
   voiceId?: string;
-  modelId?: ElevenLabsModel;
   voiceSettings?: VoiceSettings;
 }
 
@@ -44,6 +31,8 @@ interface TextToSpeechResponse {
 interface Voice {
   voice_id: string;
   name: string;
+  language: string;
+  gender: string;
   category: string;
   description?: string;
 }
@@ -55,13 +44,13 @@ interface VoicesResponse {
 }
 
 /**
- * Convert text to speech using ElevenLabs
+ * Convert text to speech using Minimax
  */
 export const textToSpeech = async (
   options: TextToSpeechOptions
 ): Promise<TextToSpeechResponse> => {
   try {
-    const voiceId = options.voiceId || '21m00Tcm4TlvDq8ikWAM';
+    const voiceId = options.voiceId || 'presenter_female';
     
     const response = await fetch(`${BACKEND_URL}/api/elevenlabs/tts`, {
       method: 'POST',
@@ -71,10 +60,10 @@ export const textToSpeech = async (
       body: JSON.stringify({
         text: options.text,
         voiceId,
-        modelId: options.modelId || ELEVENLABS_MODELS.TURBO_V2_5,
         voiceSettings: options.voiceSettings || {
-          stability: 0.5,
-          similarity_boost: 0.75,
+          speed: 1.0,
+          vol: 1.0,
+          pitch: 0,
         },
       }),
     });
@@ -93,14 +82,13 @@ export const textToSpeech = async (
       audioUrl,
     };
   } catch (error) {
-    console.error('ElevenLabs TTS error:', error);
+    console.error('Minimax TTS error:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 };
-
 
 /**
  * Get list of available voices from backend
@@ -140,6 +128,5 @@ export default {
   textToSpeech,
   getVoices,
   blobUrlToFile,
-  ELEVENLABS_MODELS,
 };
 

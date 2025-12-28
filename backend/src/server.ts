@@ -21,7 +21,7 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || "";
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || "";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
-const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY || "";
+const MINIMAX_API_KEY = process.env.MINIMAX_API_KEY || "";
 
 if (!OPENAI_API_KEY) {
   console.error("OPENAI_API_KEY environment variable is required");
@@ -213,24 +213,33 @@ app.post("/api/gemini/generate", async (req: Request, res: Response) => {
   }
 });
 
-// ============= ElevenLabs API Proxy =============
-// Default hardcoded voices (public ElevenLabs voices)
-const DEFAULT_VOICES = [
-  { voice_id: '21m00Tcm4TlvDq8ikWAM', name: 'Rachel', category: 'premade', description: 'Calm, clear American female voice' },
-  { voice_id: 'AZnzlk1XvdvUeBnXmlld', name: 'Domi', category: 'premade', description: 'Confident American female voice' },
-  { voice_id: 'EXAVITQu4vr4xnSDxMaL', name: 'Bella', category: 'premade', description: 'Soft American female voice' },
-  { voice_id: 'ErXwobaYiN019PkySvjV', name: 'Antoni', category: 'premade', description: 'Well-rounded American male voice' },
-  { voice_id: 'MF3mGyEYCl7XYWbV9V6O', name: 'Elli', category: 'premade', description: 'Emotional American female voice' },
-  { voice_id: 'TxGEqnHWrfWFTfGW9XjX', name: 'Josh', category: 'premade', description: 'Deep American male voice' },
+// ============= Minimax TTS API Proxy =============
+// Minimax TTS Voices
+const MINIMAX_VOICES = [
+  { voice_id: 'male-qn-qingse', name: 'Qingse (Male)', language: 'zh-CN', gender: 'MALE', category: 'chinese', description: 'Clear Chinese male voice' },
+  { voice_id: 'male-qn-jingying', name: 'Jingying (Male)', language: 'zh-CN', gender: 'MALE', category: 'chinese', description: 'Professional Chinese male voice' },
+  { voice_id: 'male-qn-badao', name: 'Badao (Male)', language: 'zh-CN', gender: 'MALE', category: 'chinese', description: 'Strong Chinese male voice' },
+  { voice_id: 'female-shaonv', name: 'Shaonv (Female)', language: 'zh-CN', gender: 'FEMALE', category: 'chinese', description: 'Young Chinese female voice' },
+  { voice_id: 'female-yujie', name: 'Yujie (Female)', language: 'zh-CN', gender: 'FEMALE', category: 'chinese', description: 'Mature Chinese female voice' },
+  { voice_id: 'female-chengshu', name: 'Chengshu (Female)', language: 'zh-CN', gender: 'FEMALE', category: 'chinese', description: 'Professional Chinese female voice' },
+  { voice_id: 'presenter_male', name: 'Presenter (Male)', language: 'en-US', gender: 'MALE', category: 'english', description: 'Professional English male presenter' },
+  { voice_id: 'presenter_female', name: 'Presenter (Female)', language: 'en-US', gender: 'FEMALE', category: 'english', description: 'Professional English female presenter' },
 ];
 
 app.get("/api/elevenlabs/voices", async (req: Request, res: Response) => {
-  // Always return hardcoded voices to avoid API call blocking on free tier
-  res.json({ voices: DEFAULT_VOICES });
+  // Return Minimax voices in compatible format
+  res.json({ voices: MINIMAX_VOICES });
 });
 
 app.post("/api/elevenlabs/tts", async (req: Request, res: Response) => {
-  const { text, voiceId, modelId, voiceSettings } = req.body;
+  if (!MINIMAX_API_KEY) {
+    res.status(503).json({ 
+      error: "Text-to-speech service unavailable: Minimax API key not configured" 
+    });
+    return;
+  }
+
+  const { text, voiceId } = req.body;
   if (!text || !voiceId) {
     res.status(400).json({ error: "Missing text or voiceId" });
     return;
@@ -238,29 +247,29 @@ app.post("/api/elevenlabs/tts", async (req: Request, res: Response) => {
 
   try {
     const response = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
+      "https://api.minimax.chat/v1/text_to_speech",
       {
         method: "POST",
         headers: {
-          ...(ELEVENLABS_API_KEY ? { "xi-api-key": ELEVENLABS_API_KEY } : {}),
+          "Authorization": `Bearer ${MINIMAX_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           text,
-          model_id: modelId || "eleven_turbo_v2_5",
-          voice_settings: voiceSettings || {
-            stability: 0.5,
-            similarity_boost: 0.75,
-          },
+          voice_id: voiceId,
+          model: "speech-01-turbo",
+          speed: 1.0,
+          vol: 1.0,
+          pitch: 0,
         }),
       }
     );
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`ElevenLabs TTS API error: ${response.status} - ${errorText}`);
+      console.error(`Minimax TTS API error: ${response.status} - ${errorText}`);
       res.status(503).json({ 
-        error: `Text-to-speech service unavailable: ElevenLabs API returned ${response.status}. Upgrade to paid plan for full access.` 
+        error: `Text-to-speech service unavailable: Minimax API returned ${response.status}` 
       });
       return;
     }
@@ -276,10 +285,10 @@ app.post("/api/elevenlabs/tts", async (req: Request, res: Response) => {
       }
       res.end();
     } else {
-      res.status(503).json({ error: 'No response body from ElevenLabs API' });
+      res.status(503).json({ error: 'No response body from Minimax API' });
     }
   } catch (error: any) {
-    console.error("ElevenLabs TTS error:", error);
+    console.error("Minimax TTS error:", error);
     res.status(503).json({ 
       error: "Text-to-speech service unavailable: " + error.message 
     });

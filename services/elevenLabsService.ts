@@ -14,8 +14,8 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8081';
 
 // Available TTS models
 export const ELEVENLABS_MODELS = {
+  TURBO_V2: 'eleven_turbo_v2',
   TURBO_V2_5: 'eleven_turbo_v2_5',
-  MONOLINGUAL_V1: 'eleven_monolingual_v1',
   MULTILINGUAL_V2: 'eleven_multilingual_v2',
 } as const;
 
@@ -71,7 +71,7 @@ export const textToSpeech = async (
       body: JSON.stringify({
         text: options.text,
         voiceId,
-        modelId: options.modelId || ELEVENLABS_MODELS.MONOLINGUAL_V1,
+        modelId: options.modelId || ELEVENLABS_MODELS.TURBO_V2,
         voiceSettings: options.voiceSettings || {
           stability: 0.5,
           similarity_boost: 0.75,

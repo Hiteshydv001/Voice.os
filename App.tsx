@@ -15,7 +15,6 @@ import CallSimulator from './components/CallSimulator';
 import SubscriptionModal from './components/SubscriptionModal';
 import PaymentSuccess from './components/PaymentSuccess';
 import VoiceCloning from './components/VoiceCloning';
-import CallInterface from './components/call-interface';
 import { storage } from './services/storageService';
 import { makeOutboundCall } from './services/twilioService';
 import { deductCredits } from './services/userService';

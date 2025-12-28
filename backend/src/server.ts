@@ -246,13 +246,13 @@ app.post("/api/elevenlabs/tts", async (req: Request, res: Response) => {
   }
 
   try {
-    // ✅ CORRECT MiniMax TTS endpoint (v1/t2a_v2)
+    // Try MiniMax TTS with different authentication formats
     const response = await fetch(
       "https://api.minimax.chat/v1/t2a_v2",
       {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${MINIMAX_API_KEY}`,
+          "Authorization": MINIMAX_API_KEY, // Some APIs don't use Bearer prefix
           "Content-Type": "application/json",
         },
         body: JSON.stringify({

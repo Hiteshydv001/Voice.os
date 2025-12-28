@@ -125,19 +125,35 @@ const VoiceCloning: React.FC = () => {
   ) => {
     if (!currentUser) return;
 
-    const newAudioFile: SavedAudioFile = {
-      id: Date.now().toString(),
-      name,
-      type,
-      audioUrl,
-      mimeType: type === 'recording' ? 'audio/wav' : 'audio/mpeg',
-      createdAt: new Date().toISOString(),
-      metadata,
-    };
+    try {
+      // Convert blob URL to base64 for permanent storage
+      const response = await fetch(audioUrl);
+      const blob = await response.blob();
+      const reader = new FileReader();
+      
+      const base64Audio = await new Promise<string>((resolve) => {
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
 
-    const updatedFiles = [newAudioFile, ...savedAudioFiles];
-    setSavedAudioFiles(updatedFiles);
-    await storage.saveSavedAudio(currentUser.uid, updatedFiles);
+      const newAudioFile: SavedAudioFile = {
+        id: Date.now().toString(),
+        name,
+        type,
+        audioUrl: base64Audio, // Store as base64 instead of blob URL
+        mimeType: type === 'recording' ? 'audio/wav' : 'audio/mpeg',
+        createdAt: new Date().toISOString(),
+        metadata,
+      };
+
+      const updatedFiles = [newAudioFile, ...savedAudioFiles];
+      setSavedAudioFiles(updatedFiles);
+      await storage.saveSavedAudio(currentUser.uid, updatedFiles);
+      showNotif('Audio saved successfully!', 'success');
+    } catch (error) {
+      console.error('Failed to save audio:', error);
+      showNotif('Failed to save audio', 'error');
+    }
   };
 
   // Delete Audio File

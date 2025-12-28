@@ -4,9 +4,10 @@
   "description": "Twilio real-time server with TypeScript",
   "main": "dist/server.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && copyfiles -u 1 src/twiml.xml dist",
     "start": "node dist/server.js",
     "dev": "nodemon --watch src --watch .env --ext ts,js,xml,env --exec \"ts-node\" src/server.ts",
+    "postinstall": "npm install copyfiles --save-dev || true",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -37,6 +38,7 @@
     "@types/cors": "^2.8.17",
     "@types/dotenv": "^8.2.0",
     "@types/express": "^5.0.0",
+    "copyfiles": "^2.4.1",
     "nodemon": "^2.0.22"
   }
 }

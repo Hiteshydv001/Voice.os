@@ -27,13 +27,52 @@ if (!OPENAI_API_KEY) {
 }
 
 const app = express();
-app.use(cors());
+
+// CORS Configuration
+const corsOptions = {
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://voice-os-frontend.web.app',
+    'https://voice-os-frontend.firebaseapp.com',
+    /\.onrender\.com$/,
+    /\.netlify\.app$/,
+    /\.vercel\.app$/
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 const server = http.createServer(app);
-const wss = new WebSocketServer({ server });
+
+// WebSocket Server with CORS
+const wss = new WebSocketServer({ 
+  server,
+  verifyClient: (info) => {
+    const origin = info.origin || info.req.headers.origin;
+    if (!origin) return true; // Allow requests without origin (like Twilio)
+    
+    // Check if origin matches any allowed origin
+    const allowed = corsOptions.origin.some((allowedOrigin) => {
+      if (typeof allowedOrigin === 'string') {
+        return origin === allowedOrigin;
+      } else if (allowedOrigin instanceof RegExp) {
+        return allowedOrigin.test(origin);
+      }
+      return false;
+    });
+    
+    return allowed;
+  }
+});
 
 app.use(express.urlencoded({ extended: false }));
 
+// In production (dist), twiml.xml is in the same folder as server.js
+// In development (src), it's also in the same folder
 const twimlPath = join(__dirname, "twiml.xml");
 const twimlTemplate = readFileSync(twimlPath, "utf-8");
 

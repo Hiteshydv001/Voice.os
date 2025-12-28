@@ -336,6 +336,43 @@ docker run -p 5173:5173 -p 8081:8081 \
   voice-marketing-ai
 ```
 
+## ☁️ Cloud Deployment
+
+### Deploy Frontend to Vercel
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Hiteshydv001/Voice.os.git)
+
+**Quick Steps:**
+1. Click the button above or go to [Vercel Dashboard](https://vercel.com/dashboard)
+2. Import your GitHub repository
+3. Configure:
+   - Framework: **Vite**
+   - Build Command: `npm run build`
+   - Output Directory: `dist`
+4. Add environment variables (see [VERCEL_DEPLOYMENT.md](VERCEL_DEPLOYMENT.md))
+5. Deploy!
+
+**Detailed Guide:** See [VERCEL_DEPLOYMENT.md](VERCEL_DEPLOYMENT.md) for complete instructions.
+
+### Deploy Backend to Render
+
+**Backend is already configured for Render:**
+1. Go to [Render Dashboard](https://dashboard.render.com)
+2. New → Web Service
+3. Connect your GitHub repository
+4. Configure:
+   - Root Directory: `backend`
+   - Build Command: `npm install && npm run build`
+   - Start Command: `npm start`
+5. Add environment variables:
+   - `OPENAI_API_KEY`
+   - `TWILIO_ACCOUNT_SID`
+   - `TWILIO_AUTH_TOKEN`
+   - `PUBLIC_URL` (your Render URL)
+6. Deploy!
+
+**Current Backend:** https://voice-os.onrender.com
+
 ## 📊 Key Features Explained
 
 ### Credit System

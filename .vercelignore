@@ -1,0 +1,29 @@
+# Dependencies
+node_modules
+backend/node_modules
+
+# Backend files
+backend
+
+# Environment
+.env
+.env.local
+.env*.local
+
+# Build files
+dist
+*.log
+
+# Development
+.DS_Store
+.vscode
+*.swp
+*.swo
+
+# Testing
+coverage
+.nyc_output
+
+# Misc
+.git
+.gitignore

@@ -329,10 +329,17 @@ app.post("/api/elevenlabs/tts", async (req: Request, res: Response) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.warn(`Google TTS API error: ${response.status} - ${errorText}`);
-      res.status(503).json({ 
-        error: `Text-to-speech service unavailable: Google Cloud API returned ${response.status}` 
-      });
+      console.error(`Google TTS API error: ${response.status} - ${errorText}`);
+      
+      let errorMessage = `Text-to-speech service unavailable: Google Cloud API returned ${response.status}`;
+      
+      if (response.status === 403) {
+        errorMessage = `Google Cloud Text-to-Speech API is not enabled. Please enable it at: https://console.cloud.google.com/apis/library/texttospeech.googleapis.com`;
+      } else if (response.status === 400) {
+        errorMessage = `Invalid voice configuration. Voice ID: ${voiceId}`;
+      }
+      
+      res.status(503).json({ error: errorMessage });
       return;
     }
 

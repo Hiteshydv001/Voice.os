@@ -214,16 +214,16 @@ app.post("/api/gemini/generate", async (req: Request, res: Response) => {
 });
 
 // ============= Minimax TTS API Proxy =============
-// Minimax TTS Voices (Official MiniMax voice IDs)
+// Minimax TTS Voices (Official MiniMax voice IDs from docs)
 const MINIMAX_VOICES = [
-  { voice_id: 'Calm_Woman', name: 'Calm Woman', language: 'en-US', gender: 'FEMALE', category: 'english', description: 'Calm female voice' },
-  { voice_id: 'Confident_Man', name: 'Confident Man', language: 'en-US', gender: 'MALE', category: 'english', description: 'Confident male voice' },
-  { voice_id: 'Energetic_Woman', name: 'Energetic Woman', language: 'en-US', gender: 'FEMALE', category: 'english', description: 'Energetic female voice' },
-  { voice_id: 'Professional_Man', name: 'Professional Man', language: 'en-US', gender: 'MALE', category: 'english', description: 'Professional male voice' },
-  { voice_id: 'Warm_Woman', name: 'Warm Woman', language: 'en-US', gender: 'FEMALE', category: 'english', description: 'Warm female voice' },
-  { voice_id: 'Serious_Man', name: 'Serious Man', language: 'en-US', gender: 'MALE', category: 'english', description: 'Serious male voice' },
-  { voice_id: 'Friendly_Woman', name: 'Friendly Woman', language: 'en-US', gender: 'FEMALE', category: 'english', description: 'Friendly female voice' },
-  { voice_id: 'Authoritative_Man', name: 'Authoritative Man', language: 'en-US', gender: 'MALE', category: 'english', description: 'Authoritative male voice' },
+  { voice_id: 'English_Graceful_Lady', name: 'Graceful Lady', language: 'en-US', gender: 'FEMALE', category: 'english', description: 'Graceful female voice' },
+  { voice_id: 'English_Insightful_Speaker', name: 'Insightful Speaker', language: 'en-US', gender: 'MALE', category: 'english', description: 'Insightful male voice' },
+  { voice_id: 'English_radiant_girl', name: 'Radiant Girl', language: 'en-US', gender: 'FEMALE', category: 'english', description: 'Radiant young female voice' },
+  { voice_id: 'English_Persuasive_Man', name: 'Persuasive Man', language: 'en-US', gender: 'MALE', category: 'english', description: 'Persuasive male voice' },
+  { voice_id: 'moss_audio_6dc281eb-713c-11f0-a447-9613c873494c', name: 'Moss Voice 1', language: 'en-US', gender: 'MALE', category: 'english', description: 'Professional voice' },
+  { voice_id: 'moss_audio_570551b1-735c-11f0-b236-0adeeecad052', name: 'Moss Voice 2', language: 'en-US', gender: 'FEMALE', category: 'english', description: 'Clear female voice' },
+  { voice_id: 'moss_audio_ad5baf92-735f-11f0-8263-fe5a2fe98ec8', name: 'Moss Voice 3', language: 'en-US', gender: 'MALE', category: 'english', description: 'Deep male voice' },
+  { voice_id: 'English_Lucky_Robot', name: 'Lucky Robot', language: 'en-US', gender: 'MALE', category: 'english', description: 'Robotic voice' },
 ];
 
 app.get("/api/elevenlabs/voices", async (req: Request, res: Response) => {
@@ -278,15 +278,16 @@ app.post("/api/elevenlabs/tts", async (req: Request, res: Response) => {
       return;
     }
 
-    // MiniMax returns JSON with base64 audio at data.audio.data (per official docs)
+    // MiniMax returns JSON with HEX encoded audio at data.audio (per official docs)
     const data = await response.json();
     
     // Log for debugging
     console.log("Minimax API response structure:", JSON.stringify(data, null, 2));
     
-    // Extract base64 audio from official response format: data.audio.data
-    if (data.data && data.data.audio && data.data.audio.data) {
-      const audioBuffer = Buffer.from(data.data.audio.data, 'base64');
+    // Extract HEX audio from official response format: data.audio
+    if (data.data && data.data.audio) {
+      // Decode from HEX, not base64 (default output_format is 'hex')
+      const audioBuffer = Buffer.from(data.data.audio, 'hex');
       res.setHeader("Content-Type", "audio/wav");
       res.send(audioBuffer);
     } else {

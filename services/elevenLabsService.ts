@@ -205,7 +205,7 @@ export const getVoices = async (): Promise<VoicesResponse> => {
  * Note: This feature requires backend implementation for security
  */
 export const addVoice = async (
-  options: AddVoiceOptions
+  _options: AddVoiceOptions
 ): Promise<AddVoiceResponse> => {
   return { 
     success: false, 
@@ -217,7 +217,7 @@ export const addVoice = async (
  * Delete a voice
  * Note: This feature requires backend implementation for security
  */
-export const deleteVoice = async (voiceId: string): Promise<{ success: boolean; error?: string }> => {
+export const deleteVoice = async (_voiceId: string): Promise<{ success: boolean; error?: string }> => {
   return { 
     success: false, 
     error: 'Voice management requires backend implementation for security.' 
@@ -228,7 +228,7 @@ export const deleteVoice = async (voiceId: string): Promise<{ success: boolean; 
  * Get voice details
  * Note: This feature requires backend implementation for security
  */
-export const getVoiceDetails = async (voiceId: string) => {
+export const getVoiceDetails = async (_voiceId: string) => {
   return { 
     success: false, 
     error: 'Voice details require backend implementation for security.' 
@@ -240,7 +240,7 @@ export const getVoiceDetails = async (voiceId: string) => {
  * Note: This feature requires backend implementation for security
  */
 export const textToSpeechStream = async (
-  options: TextToSpeechOptions
+  _options: TextToSpeechOptions
 ): Promise<ReadableStream<Uint8Array> | null> => {
   console.warn('Streaming TTS requires backend implementation');
   return null;

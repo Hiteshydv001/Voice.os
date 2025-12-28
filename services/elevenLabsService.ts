@@ -202,219 +202,59 @@ export const getVoices = async (): Promise<VoicesResponse> => {
 
 /**
  * Add a new voice (voice cloning)
+ * Note: This feature requires backend implementation for security
  */
 export const addVoice = async (
   options: AddVoiceOptions
 ): Promise<AddVoiceResponse> => {
-  if (!ELEVENLABS_API_KEY) {
-    return { success: false, error: 'API key not configured' };
-  }
-
-  // Quick subscription check: avoid sending files if cloning not permitted
-  try {
-    const info = await getUserInfo();
-    if (info.success) {
-      const canClone = info.user?.subscription?.can_use_instant_voice_cloning;
-      if (!canClone) {
-        return { success: false, error: 'Your subscription does not permit instant voice cloning (feature coming soon in this project).' };
-      }
-    }
-  } catch (e) {
-    // If we can't retrieve user info, continue and let API provide the detailed error
-    console.warn('Could not verify subscription for cloning, continuing to attempt addVoice');
-  }
-
-  try {
-    const formData = new FormData();
-    formData.append('name', options.name);
-    
-    if (options.description) {
-      formData.append('description', options.description);
-    }
-
-    // Add audio files
-    options.files.forEach((file, index) => {
-      formData.append('files', file, `sample_${index}.${file.name.split('.').pop()}`);
-    });
-
-    // Add labels if provided
-    if (options.labels) {
-      formData.append('labels', JSON.stringify(options.labels));
-    }
-
-    const response = await fetch(`${BASE_URL}/voices/add`, {
-      method: 'POST',
-      headers: {
-        'xi-api-key': ELEVENLABS_API_KEY,
-      },
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail?.message || `Failed to add voice: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return {
-      success: true,
-      voiceId: data.voice_id,
-    };
-  } catch (error) {
-    console.error('ElevenLabs add voice error:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
-  }
+  return { 
+    success: false, 
+    error: 'Voice cloning is not available. This feature requires a paid ElevenLabs subscription and backend implementation.' 
+  };
 };
 
 /**
  * Delete a voice
+ * Note: This feature requires backend implementation for security
  */
 export const deleteVoice = async (voiceId: string): Promise<{ success: boolean; error?: string }> => {
-  if (!ELEVENLABS_API_KEY) {
-    return { success: false, error: 'API key not configured' };
-  }
-
-  try {
-    const response = await fetch(`${BASE_URL}/voices/${voiceId}`, {
-      method: 'DELETE',
-      headers: {
-        'xi-api-key': ELEVENLABS_API_KEY,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to delete voice: ${response.status}`);
-    }
-
-    return { success: true };
-  } catch (error) {
-    console.error('ElevenLabs delete voice error:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
-  }
+  return { 
+    success: false, 
+    error: 'Voice management requires backend implementation for security.' 
+  };
 };
 
 /**
  * Get voice details
+ * Note: This feature requires backend implementation for security
  */
 export const getVoiceDetails = async (voiceId: string) => {
-  if (!ELEVENLABS_API_KEY) {
-    return { success: false, error: 'API key not configured' };
-  }
-
-  try {
-    const response = await fetch(`${BASE_URL}/voices/${voiceId}`, {
-      headers: {
-        'xi-api-key': ELEVENLABS_API_KEY,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch voice details: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return {
-      success: true,
-      voice: data,
-    };
-  } catch (error) {
-    console.error('ElevenLabs get voice details error:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
-  }
+  return { 
+    success: false, 
+    error: 'Voice details require backend implementation for security.' 
+  };
 };
 
 /**
  * Text-to-Speech with streaming support
- * Useful for real-time applications where audio should start playing before full generation
+ * Note: This feature requires backend implementation for security
  */
 export const textToSpeechStream = async (
   options: TextToSpeechOptions
 ): Promise<ReadableStream<Uint8Array> | null> => {
-  if (!ELEVENLABS_API_KEY) {
-    console.error('ElevenLabs API key not found');
-    return null;
-  }
-
-  try {
-    const voiceId = options.voiceId || '21m00Tcm4TlvDq8ikWAM';
-    
-    const payload: any = {
-      text: options.text,
-      model_id: options.modelId || ELEVENLABS_MODELS.TURBO_V2_5,
-      voice_settings: options.voiceSettings || {
-        stability: 0.5,
-        similarity_boost: 0.75,
-        style: 0.0,
-        use_speaker_boost: true,
-      },
-    };
-
-    if (options.optimize_streaming_latency !== undefined) {
-      payload.optimize_streaming_latency = options.optimize_streaming_latency;
-    }
-
-    const response = await fetch(`${BASE_URL}/text-to-speech/${voiceId}/stream`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'audio/mpeg',
-        'xi-api-key': ELEVENLABS_API_KEY,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      console.error('ElevenLabs streaming API error:', response.status);
-      return null;
-    }
-
-    return response.body;
-  } catch (error) {
-    console.error('ElevenLabs streaming TTS error:', error);
-    return null;
-  }
+  console.warn('Streaming TTS requires backend implementation');
+  return null;
 };
 
 /**
  * Get user info and subscription details
+ * Note: This feature requires backend implementation for security
  */
 export const getUserInfo = async () => {
-  if (!ELEVENLABS_API_KEY) {
-    return { success: false, error: 'API key not configured' };
-  }
-
-  try {
-    const response = await fetch(`${BASE_URL}/user`, {
-      headers: {
-        'xi-api-key': ELEVENLABS_API_KEY,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch user info: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return {
-      success: true,
-      user: data,
-    };
-  } catch (error) {
-    console.error('ElevenLabs get user info error:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
-  }
+  return { 
+    success: false, 
+    error: 'User info requires backend implementation for security.' 
+  };
 };
 
 /**

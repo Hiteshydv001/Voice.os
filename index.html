@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🎙️</text></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VoiceMarketing.AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <script>
+      // Global error handler for script loading failures
+      window.addEventListener('error', function(e) {
+        // Suppress expected Stripe SDK loading errors in restricted environments
+        if (e.target.tagName === 'SCRIPT' && e.target.src && e.target.src.includes('js.stripe.com')) {
+           console.warn('Stripe SDK failed to load (expected if offline/blocked).');
+           return;
+        }
+        if (e.target.tagName === 'SCRIPT') {
+          console.error('Script loading error:', e.target.src);
+        }
+      }, true);
+
+      // Polyfill process.env
+      if (typeof process === "undefined") {
+        window.process = { env: { NODE_ENV: 'development' } };
+      }
+    </script>
+    <style>
+      body {
+        font-family: 'Space Mono', monospace;
+        background-color: #f5f5f4; /* stone-100 */
+        color: #0c0a09; /* stone-950 */
+      }
+      /* Custom scrollbar for retro feel */
+      ::-webkit-scrollbar {
+        width: 12px;
+        background: #e7e5e4;
+        border-left: 2px solid #000;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #000;
+        border: 2px solid #e7e5e4;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.2.0",
+    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+    "react-dom": "https://esm.sh/react-dom@18.2.0",
+    "firebase/app": "https://esm.sh/firebase@10.8.0/app",
+    "firebase/auth": "https://esm.sh/firebase@10.8.0/auth?deps=firebase@10.8.0",
+    "firebase/firestore": "https://esm.sh/firebase@10.8.0/firestore?deps=firebase@10.8.0",
+    "firebase/analytics": "https://esm.sh/firebase@10.8.0/analytics?deps=firebase@10.8.0",
+    "vite": "https://esm.sh/vite@5.2.0",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@4.2.1",
+    "recharts": "https://esm.sh/recharts@2.12.3?deps=react@18.2.0,react-dom@18.2.0",
+    "react-router-dom": "https://esm.sh/react-router-dom@6.22.3?deps=react@18.2.0,react-dom@18.2.0",
+    "@google/generative-ai": "https://esm.sh/@google/generative-ai",
+    "lucide-react": "https://esm.sh/lucide-react@0.363.0?deps=react@18.2.0",
+    "@stripe/stripe-js": "https://esm.sh/@stripe/stripe-js@3.0.7",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "firebase/": "https://esm.sh/firebase@^12.6.0/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-stone-100 text-black">
+    <div id="root"></div>
+    <script type="module" src="./index.tsx"></script>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>

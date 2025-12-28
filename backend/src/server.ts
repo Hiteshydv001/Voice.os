@@ -1,0 +1,140 @@
+import express, { Request, Response } from "express";
+import { WebSocketServer, WebSocket } from "ws";
+import { IncomingMessage } from "http";
+import dotenv from "dotenv";
+import http from "http";
+import { readFileSync } from "fs";
+import { join } from "path";
+import cors from "cors";
+import { Twilio } from "twilio";
+import {
+  handleCallConnection,
+  handleFrontendConnection,
+} from "./sessionManager";
+import functions from "./functionHandlers";
+
+dotenv.config();
+
+const PORT = parseInt(process.env.PORT || "8081", 10);
+const PUBLIC_URL = process.env.PUBLIC_URL || "";
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
+const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || "";
+const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || "";
+
+if (!OPENAI_API_KEY) {
+  console.error("OPENAI_API_KEY environment variable is required");
+  process.exit(1);
+}
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+const server = http.createServer(app);
+const wss = new WebSocketServer({ server });
+
+app.use(express.urlencoded({ extended: false }));
+
+const twimlPath = join(__dirname, "twiml.xml");
+const twimlTemplate = readFileSync(twimlPath, "utf-8");
+
+app.get("/public-url", (req, res) => {
+  res.json({ publicUrl: PUBLIC_URL });
+});
+
+app.all("/twiml", (req, res) => {
+  const wsUrl = new URL(PUBLIC_URL);
+  wsUrl.protocol = "wss:";
+  wsUrl.pathname = `/call`;
+
+  const twimlContent = twimlTemplate.replace("{{WS_URL}}", wsUrl.toString());
+  res.type("text/xml").send(twimlContent);
+});
+
+// Legacy route for backward compatibility
+app.all("/voice/openai/incoming", (req, res) => {
+  const wsUrl = new URL(PUBLIC_URL);
+  wsUrl.protocol = "wss:";
+  wsUrl.pathname = `/voice/openai/stream`;
+
+  const twimlContent = twimlTemplate.replace("{{WS_URL}}", wsUrl.toString());
+  res.type("text/xml").send(twimlContent);
+});
+
+// New endpoint to list available tools (schemas)
+app.get("/tools", (req, res) => {
+  res.json(functions.map((f) => f.schema));
+});
+
+app.get("/api/twilio", (req, res) => {
+  res.json({
+    credentialsSet: !!(TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN),
+  });
+});
+
+app.get("/api/twilio/numbers", async (req: Request, res: Response) => {
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
+    res.status(500).json({ error: "Twilio credentials not configured" });
+    return;
+  }
+  try {
+    const client = new Twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+    const incomingPhoneNumbers = await client.incomingPhoneNumbers.list({ limit: 20 });
+    const numbers = incomingPhoneNumbers.map((n) => ({
+      sid: n.sid,
+      phoneNumber: n.phoneNumber,
+      friendlyName: n.friendlyName,
+    }));
+    res.json({ numbers });
+  } catch (error: any) {
+    console.error("Error fetching numbers:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post("/api/twilio/call", async (req: Request, res: Response) => {
+  const { to, from } = req.body;
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
+    res.status(500).json({ error: "Twilio credentials not configured" });
+    return;
+  }
+  if (!to || !from) {
+    res.status(400).json({ error: "Missing 'to' or 'from' phone number" });
+    return;
+  }
+  try {
+    const client = new Twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+    const call = await client.calls.create({
+      url: `${PUBLIC_URL}/twiml`,
+      to,
+      from,
+    });
+    res.json({ success: true, callSid: call.sid });
+  } catch (error: any) {
+    console.error("Error initiating call:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+let currentCall: WebSocket | null = null;
+let currentLogs: WebSocket | null = null;
+
+wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
+  const url = new URL(req.url || "", `http://${req.headers.host}`);
+  const pathname = url.pathname;
+
+  if (pathname === "/call" || pathname === "/voice/openai/stream") {
+    if (currentCall) currentCall.close();
+    currentCall = ws;
+    handleCallConnection(currentCall, OPENAI_API_KEY);
+  } else if (pathname === "/logs") {
+    if (currentLogs) currentLogs.close();
+    currentLogs = ws;
+    handleFrontendConnection(currentLogs);
+  } else {
+    ws.close();
+  }
+});
+
+server.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});

@@ -1,0 +1,49 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // User profiles - users can read/write their own profile
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // Users can read and write their own data subcollection
+      match /data/{document=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+    
+    // Agent flows - users can read/write their own flows
+    match /agent_flows/{flowId} {
+      allow read: if request.auth != null && 
+                     (resource.data.userId == request.auth.uid || 
+                      !exists(/databases/$(database)/documents/agent_flows/$(flowId)));
+      allow write: if request.auth != null && 
+                      request.resource.data.userId == request.auth.uid;
+      allow delete: if request.auth != null && 
+                       resource.data.userId == request.auth.uid;
+    }
+    
+    // Campaigns - users can read/write their own campaigns
+    match /campaigns/{campaignId} {
+      allow read, write: if request.auth != null && 
+                            request.resource.data.userId == request.auth.uid;
+    }
+    
+    // Leads - users can read/write their own leads
+    match /leads/{leadId} {
+      allow read, write: if request.auth != null && 
+                            request.resource.data.userId == request.auth.uid;
+    }
+    
+    // Activity logs - users can read/write their own logs
+    match /activity_logs/{logId} {
+      allow read, write: if request.auth != null && 
+                            request.resource.data.userId == request.auth.uid;
+    }
+    
+    // Default deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "VoiceMarketing.AI",
+  "description": "A production-ready MVP platform for creating AI voice marketing agents, managing leads, and running sales campaigns.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

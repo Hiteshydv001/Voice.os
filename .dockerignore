@@ -1,0 +1,55 @@
+# Node modules
+node_modules
+*/node_modules
+npm-debug.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+dist
+*/dist
+build
+*/build
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+*.md
+
+# Frontend (not needed for backend)
+components
+contexts
+lib
+public
+services
+openai-realtime
+index.html
+index.tsx
+App.tsx
+vite.config.ts
+tsconfig.json
+package.json
+package-lock.json
+firebase.json
+firestore.rules
+
+# Other
+debug.log
+*.log

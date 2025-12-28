@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import TopBar from "./top-bar";
 import ChecklistAndConfig from "./checklist-and-config";
 import SessionConfigurationPanel from "./session-configuration-panel";

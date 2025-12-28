@@ -1,5 +1,6 @@
 import "server-only";
-import twilio from "twilio";
+// @ts-ignore - Twilio module not needed in frontend build
+// import twilio from "twilio";
 
 const { TWILIO_ACCOUNT_SID: accountSid, TWILIO_AUTH_TOKEN: authToken } =
   process.env;

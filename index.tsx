@@ -1,11 +1,11 @@
-import React from 'react';
+
 import { createRoot } from 'react-dom/client';
 import App from './App';
 
 const rootElement = document.getElementById('root');
 
 // Add global error listener for unhandled rejections/exceptions
-window.onerror = function(message, source, lineno, colno, error) {
+window.onerror = function(message, source, lineno, _colno, error) {
   console.error("Global Error:", message, error);
   if (rootElement) {
      rootElement.innerHTML = `
@@ -32,8 +32,9 @@ if (!rootElement.hasAttribute('data-root-initialized')) {
     rootElement.setAttribute('data-root-initialized', 'true');
     root.render(<App />);
     console.log("Root Rendered Successfully");
-  } catch (error) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("Application failed to mount:", error);
-    rootElement.innerHTML = `<div style="padding: 20px; color: red;"><h1>System Failure</h1><p>${error.message}</p></div>`;
+    rootElement.innerHTML = `<div style="padding: 20px; color: red;"><h1>System Failure</h1><p>${errorMessage}</p></div>`;
   }
 }

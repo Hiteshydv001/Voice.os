@@ -22,7 +22,7 @@ interface SessionConfigurationPanelProps {
 }
 
 const SessionConfigurationPanel: React.FC<SessionConfigurationPanelProps> = ({
-  callStatus,
+  callStatus: _callStatus,
   onSave,
 }) => {
   const [instructions, setInstructions] = useState(

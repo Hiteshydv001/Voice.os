@@ -105,7 +105,7 @@ export const createNewFlow = (userId: string, name: string = 'New Agent Flow'): 
         id: 'start-1',
         type: 'start',
         position: { x: 250, y: 50 },
-        data: { config: {}, label: 'Start' },
+        data: { config: {} as any, label: 'Start' },
       },
     ],
     edges: [],

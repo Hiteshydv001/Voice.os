@@ -79,7 +79,7 @@ export const makeOutboundCall = async (to: string, agentName: string, agentScrip
   };
 
   // Construct System Prompt
-  const systemPrompt = `You are ${agentData.name}. ${agentData.goal}. Tone: ${agentData.tone}. 
+  const _systemPrompt = `You are ${agentData.name}. ${agentData.goal}. Tone: ${agentData.tone}. 
   Product/Context: ${agentData.productDescription}
   
   Script Guidelines:
@@ -89,7 +89,7 @@ export const makeOutboundCall = async (to: string, agentName: string, agentScrip
   
   Keep your responses concise and conversational.`;
 
-  const initialGreeting = agentData.script.opening;
+  const _initialGreeting = agentData.script.opening;
   
   // Backend endpoint handles TwiML generation and WebSocket stream
   // UPDATED: Pointing to OpenAI Realtime endpoint (Clean URL, no params)

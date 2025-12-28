@@ -1,6 +1,5 @@
-import React from "react";
 import { Button } from "./ui/button";
-import { BookOpen, FileText } from "lucide-react";
+import { BookOpen } from "lucide-react";
 
 const TopBar = () => {
   return (

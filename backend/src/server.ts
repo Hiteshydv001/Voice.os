@@ -51,7 +51,7 @@ const server = http.createServer(app);
 // WebSocket Server with CORS
 const wss = new WebSocketServer({ 
   server,
-  verifyClient: (info) => {
+  verifyClient: (info: { origin: string; secure: boolean; req: IncomingMessage }) => {
     const origin = info.origin || info.req.headers.origin;
     if (!origin) return true; // Allow requests without origin (like Twilio)
     

@@ -14,9 +14,9 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8081';
 
 // Available TTS models
 export const ELEVENLABS_MODELS = {
-  TURBO_V2: 'eleven_turbo_v2',
-  TURBO_V2_5: 'eleven_turbo_v2_5',
-  MULTILINGUAL_V2: 'eleven_multilingual_v2',
+  TURBO_V2_5: 'eleven_turbo_v2_5',       // Fast & balanced - FREE TIER
+  FLASH_V2: 'eleven_flash_v2',             // Ultra-low latency - FREE TIER
+  MULTILINGUAL_V2: 'eleven_multilingual_v2', // Many languages - PAID
 } as const;
 
 export type ElevenLabsModel = typeof ELEVENLABS_MODELS[keyof typeof ELEVENLABS_MODELS];
@@ -71,7 +71,7 @@ export const textToSpeech = async (
       body: JSON.stringify({
         text: options.text,
         voiceId,
-        modelId: options.modelId || ELEVENLABS_MODELS.TURBO_V2,
+        modelId: options.modelId || ELEVENLABS_MODELS.TURBO_V2_5,
         voiceSettings: options.voiceSettings || {
           stability: 0.5,
           similarity_boost: 0.75,

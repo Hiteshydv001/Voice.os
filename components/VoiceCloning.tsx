@@ -38,7 +38,7 @@ const VoiceCloning: React.FC = () => {
 
   // TTS State
   const [testText, setTestText] = useState('Hello! This is a test of the voice synthesis system.');
-  const [selectedModel, setSelectedModel] = useState('eleven_turbo_v2');
+  const [selectedModel, setSelectedModel] = useState('eleven_turbo_v2_5');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedAudioUrl, setGeneratedAudioUrl] = useState<string | null>(null);
 
@@ -614,8 +614,8 @@ const VoiceCloning: React.FC = () => {
                     onChange={(e) => setSelectedModel(e.target.value)}
                     className="w-full px-4 py-3 border-2 border-black font-mono font-bold focus:outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all"
                   >
-                    <option value="eleven_turbo_v2">TURBO V2 [FREE TIER]</option>
-                    <option value="eleven_turbo_v2_5">TURBO V2.5 [PAID]</option>
+                    <option value="eleven_turbo_v2_5">TURBO V2.5 [FREE - FAST]</option>
+                    <option value="eleven_flash_v2">FLASH V2 [FREE - LOW LATENCY]</option>
                     <option value="eleven_multilingual_v2">MULTILINGUAL V2 [PAID]</option>
                   </select>
                 </div>

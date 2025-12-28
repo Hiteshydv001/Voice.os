@@ -21,7 +21,7 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || "";
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || "";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
-const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY || "";
+// ELEVENLABS_API_KEY removed - now using Google Cloud TTS via GEMINI_API_KEY
 
 if (!OPENAI_API_KEY) {
   console.error("OPENAI_API_KEY environment variable is required");
@@ -213,132 +213,145 @@ app.post("/api/gemini/generate", async (req: Request, res: Response) => {
   }
 });
 
-// ============= ElevenLabs API Proxy =============
-// Default voices fallback (same as frontend)
-const DEFAULT_VOICES = [
-  {
-    voice_id: '21m00Tcm4TlvDq8ikWAM',
-    name: 'Rachel',
-    category: 'premade',
-    description: 'Calm, clear American female voice',
-  },
-  {
-    voice_id: 'AZnzlk1XvdvUeBnXmlld',
-    name: 'Domi',
-    category: 'premade',
-    description: 'Confident American female voice',
-  },
-  {
-    voice_id: 'EXAVITQu4vr4xnSDxMaL',
-    name: 'Bella',
-    category: 'premade',
-    description: 'Soft American female voice',
-  },
-  {
-    voice_id: 'ErXwobaYiN019PkySvjV',
-    name: 'Antoni',
-    category: 'premade',
-    description: 'Well-rounded American male voice',
-  },
-  {
-    voice_id: 'MF3mGyEYCl7XYWbV9V6O',
-    name: 'Elli',
-    category: 'premade',
-    description: 'Emotional American female voice',
-  },
-  {
-    voice_id: 'TxGEqnHWrfWFTfGW9XjX',
-    name: 'Josh',
-    category: 'premade',
-    description: 'Deep American male voice',
-  },
+// ============= Google Cloud Text-to-Speech API Proxy =============
+// Google Cloud TTS Voices (Free Tier: 1M characters/month Standard, 4M WaveNet)
+const GOOGLE_TTS_VOICES = [
+  // English (US) - Neural2 voices (high quality, free tier)
+  { voice_id: 'en-US-Neural2-A', name: 'Emily', language: 'en-US', gender: 'FEMALE', category: 'premium', description: 'Natural American female voice' },
+  { voice_id: 'en-US-Neural2-C', name: 'James', language: 'en-US', gender: 'MALE', category: 'premium', description: 'Professional American male voice' },
+  { voice_id: 'en-US-Neural2-D', name: 'Michael', language: 'en-US', gender: 'MALE', category: 'premium', description: 'Authoritative American male voice' },
+  { voice_id: 'en-US-Neural2-E', name: 'Jessica', language: 'en-US', gender: 'FEMALE', category: 'premium', description: 'Friendly American female voice' },
+  { voice_id: 'en-US-Neural2-F', name: 'Sarah', language: 'en-US', gender: 'FEMALE', category: 'premium', description: 'Warm American female voice' },
+  
+  // English (US) - Standard voices (always free)
+  { voice_id: 'en-US-Standard-A', name: 'Rachel', language: 'en-US', gender: 'MALE', category: 'standard', description: 'Clear American male voice' },
+  { voice_id: 'en-US-Standard-B', name: 'David', language: 'en-US', gender: 'MALE', category: 'standard', description: 'Strong American male voice' },
+  { voice_id: 'en-US-Standard-C', name: 'Laura', language: 'en-US', gender: 'FEMALE', category: 'standard', description: 'Confident American female voice' },
+  { voice_id: 'en-US-Standard-D', name: 'John', language: 'en-US', gender: 'MALE', category: 'standard', description: 'Reliable American male voice' },
+  { voice_id: 'en-US-Standard-E', name: 'Emma', language: 'en-US', gender: 'FEMALE', category: 'standard', description: 'Professional American female voice' },
+  
+  // English (UK)
+  { voice_id: 'en-GB-Neural2-A', name: 'Oliver', language: 'en-GB', gender: 'FEMALE', category: 'premium', description: 'British female voice' },
+  { voice_id: 'en-GB-Neural2-B', name: 'William', language: 'en-GB', gender: 'MALE', category: 'premium', description: 'British male voice' },
+  { voice_id: 'en-GB-Standard-A', name: 'Charlotte', language: 'en-GB', gender: 'FEMALE', category: 'standard', description: 'Standard British female voice' },
+  { voice_id: 'en-GB-Standard-B', name: 'Harry', language: 'en-GB', gender: 'MALE', category: 'standard', description: 'Standard British male voice' },
+  
+  // English (Australia)
+  { voice_id: 'en-AU-Neural2-A', name: 'Sophie', language: 'en-AU', gender: 'FEMALE', category: 'premium', description: 'Australian female voice' },
+  { voice_id: 'en-AU-Neural2-B', name: 'Jack', language: 'en-AU', gender: 'MALE', category: 'premium', description: 'Australian male voice' },
+  
+  // English (India)
+  { voice_id: 'en-IN-Neural2-A', name: 'Priya', language: 'en-IN', gender: 'FEMALE', category: 'premium', description: 'Indian English female voice' },
+  { voice_id: 'en-IN-Neural2-B', name: 'Arjun', language: 'en-IN', gender: 'MALE', category: 'premium', description: 'Indian English male voice' },
+  
+  // Spanish (Spain)
+  { voice_id: 'es-ES-Neural2-A', name: 'Isabella', language: 'es-ES', gender: 'FEMALE', category: 'premium', description: 'Spanish female voice' },
+  { voice_id: 'es-ES-Neural2-B', name: 'Diego', language: 'es-ES', gender: 'MALE', category: 'premium', description: 'Spanish male voice' },
+  
+  // Spanish (US)
+  { voice_id: 'es-US-Neural2-A', name: 'Maria', language: 'es-US', gender: 'FEMALE', category: 'premium', description: 'US Spanish female voice' },
+  { voice_id: 'es-US-Neural2-B', name: 'Carlos', language: 'es-US', gender: 'MALE', category: 'premium', description: 'US Spanish male voice' },
+  
+  // French
+  { voice_id: 'fr-FR-Neural2-A', name: 'Camille', language: 'fr-FR', gender: 'FEMALE', category: 'premium', description: 'French female voice' },
+  { voice_id: 'fr-FR-Neural2-B', name: 'Antoine', language: 'fr-FR', gender: 'MALE', category: 'premium', description: 'French male voice' },
+  
+  // German
+  { voice_id: 'de-DE-Neural2-A', name: 'Anna', language: 'de-DE', gender: 'FEMALE', category: 'premium', description: 'German female voice' },
+  { voice_id: 'de-DE-Neural2-B', name: 'Felix', language: 'de-DE', gender: 'MALE', category: 'premium', description: 'German male voice' },
+  
+  // Italian
+  { voice_id: 'it-IT-Neural2-A', name: 'Giulia', language: 'it-IT', gender: 'FEMALE', category: 'premium', description: 'Italian female voice' },
+  { voice_id: 'it-IT-Neural2-C', name: 'Marco', language: 'it-IT', gender: 'MALE', category: 'premium', description: 'Italian male voice' },
+  
+  // Japanese
+  { voice_id: 'ja-JP-Neural2-B', name: 'Yuki', language: 'ja-JP', gender: 'FEMALE', category: 'premium', description: 'Japanese female voice' },
+  { voice_id: 'ja-JP-Neural2-C', name: 'Takeshi', language: 'ja-JP', gender: 'MALE', category: 'premium', description: 'Japanese male voice' },
+  
+  // Korean
+  { voice_id: 'ko-KR-Neural2-A', name: 'Ji-woo', language: 'ko-KR', gender: 'FEMALE', category: 'premium', description: 'Korean female voice' },
+  { voice_id: 'ko-KR-Neural2-C', name: 'Min-jun', language: 'ko-KR', gender: 'MALE', category: 'premium', description: 'Korean male voice' },
+  
+  // Portuguese (Brazil)
+  { voice_id: 'pt-BR-Neural2-A', name: 'Ana', language: 'pt-BR', gender: 'FEMALE', category: 'premium', description: 'Brazilian Portuguese female voice' },
+  { voice_id: 'pt-BR-Neural2-B', name: 'Lucas', language: 'pt-BR', gender: 'MALE', category: 'premium', description: 'Brazilian Portuguese male voice' },
+  
+  // Hindi
+  { voice_id: 'hi-IN-Neural2-A', name: 'Ananya', language: 'hi-IN', gender: 'FEMALE', category: 'premium', description: 'Hindi female voice' },
+  { voice_id: 'hi-IN-Neural2-C', name: 'Rohan', language: 'hi-IN', gender: 'MALE', category: 'premium', description: 'Hindi male voice' },
 ];
 
 app.get("/api/elevenlabs/voices", async (req: Request, res: Response) => {
-  if (!ELEVENLABS_API_KEY) {
-    console.warn("ElevenLabs API key not configured, using default voices");
-    res.json({ voices: DEFAULT_VOICES });
-    return;
-  }
-
-  try {
-    const response = await fetch("https://api.elevenlabs.io/v1/voices", {
-      headers: { "xi-api-key": ELEVENLABS_API_KEY },
-    });
-
-    if (!response.ok) {
-      // If API returns 401/403/429, fall back to default voices
-      console.warn(`ElevenLabs API error ${response.status}, using default voices`);
-      res.json({ voices: DEFAULT_VOICES });
-      return;
-    }
-
-    const data = await response.json();
-    res.json(data);
-  } catch (error: any) {
-    console.warn("ElevenLabs voices error, using default voices:", error);
-    // Return default voices instead of 500 error
-    res.json({ voices: DEFAULT_VOICES });
-  }
+  // Return Google TTS voices in ElevenLabs-compatible format
+  res.json({ voices: GOOGLE_TTS_VOICES });
 });
 
 app.post("/api/elevenlabs/tts", async (req: Request, res: Response) => {
-  const { text, voiceId, modelId, voiceSettings } = req.body;
+  if (!GEMINI_API_KEY) {
+    res.status(503).json({ 
+      error: "Text-to-speech service unavailable: Google Cloud API key not configured" 
+    });
+    return;
+  }
+
+  const { text, voiceId } = req.body;
   if (!text || !voiceId) {
     res.status(400).json({ error: "Missing text or voiceId" });
     return;
   }
 
-  // OPTION 1: Use hardcoded voice_id directly WITHOUT API key check
-  // This works for public/premade voices even on free tier (sometimes)
   try {
+    // Parse voice info from voiceId (format: en-US-Neural2-A)
+    const voiceInfo = GOOGLE_TTS_VOICES.find(v => v.voice_id === voiceId);
+    const languageCode = voiceInfo?.language || 'en-US';
+    const voiceName = voiceId;
+    
     const response = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
+      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GEMINI_API_KEY}`,
       {
         method: "POST",
-        headers: {
-          // Try without API key first for public voices
-          ...(ELEVENLABS_API_KEY ? { "xi-api-key": ELEVENLABS_API_KEY } : {}),
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          text,
-          model_id: modelId || "eleven_monolingual_v1", // Use free tier model
-          voice_settings: voiceSettings || {
-            stability: 0.5,
-            similarity_boost: 0.75,
+          input: { text },
+          voice: {
+            languageCode,
+            name: voiceName,
+          },
+          audioConfig: {
+            audioEncoding: "MP3",
+            speakingRate: 1.0,
+            pitch: 0.0,
+            volumeGainDb: 0.0,
           },
         }),
       }
     );
 
     if (!response.ok) {
-      // Log the error but return a graceful response
       const errorText = await response.text();
-      console.warn(`ElevenLabs TTS API error: ${response.status} - ${errorText}`);
+      console.warn(`Google TTS API error: ${response.status} - ${errorText}`);
       res.status(503).json({ 
-        error: `Text-to-speech service unavailable: ElevenLabs API returned ${response.status}. Try upgrading to ElevenLabs paid plan or use a different TTS service.` 
+        error: `Text-to-speech service unavailable: Google Cloud API returned ${response.status}` 
       });
       return;
     }
 
-    // Forward the audio stream
-    res.setHeader("Content-Type", "audio/mpeg");
-    const reader = response.body?.getReader();
-    if (reader) {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        res.write(value);
-      }
-      res.end();
-    } else {
-      res.status(503).json({ error: 'No response body from ElevenLabs API' });
+    const data = await response.json();
+    
+    if (!data.audioContent) {
+      res.status(503).json({ error: 'No audio content returned from Google TTS' });
+      return;
     }
+
+    // Convert base64 to buffer and send as MP3
+    const audioBuffer = Buffer.from(data.audioContent, 'base64');
+    res.setHeader("Content-Type", "audio/mpeg");
+    res.send(audioBuffer);
+    
   } catch (error: any) {
-    console.warn("ElevenLabs TTS error:", error);
+    console.warn("Google TTS error:", error);
     res.status(503).json({ 
-      error: "Text-to-speech service unavailable. This feature may require a paid ElevenLabs subscription." 
+      error: "Text-to-speech service unavailable: " + error.message 
     });
   }
 });

@@ -1,41 +1,29 @@
 /**
- * ElevenLabs Text-to-Speech Service
- * API Documentation: https://elevenlabs.io/docs
+ * Google Cloud Text-to-Speech Service (formerly ElevenLabs)
+ * Switched to Google TTS for reliable free tier access
+ * 
+ * Free Tier: 1 million characters/month (Standard voices)
+ * API: https://cloud.google.com/text-to-speech/docs
  * 
  * Features:
- * - Text-to-Speech with multiple models
- * - Voice management (list, get details, delete)
- * - Streaming support
- * 
- * Note: All API calls are proxied through backend for security
+ * - 40+ languages supported
+ * - Natural sounding voices (Neural2 & Standard)
+ * - Multiple voice options per language
+ * - Better free tier than ElevenLabs
  */
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8081';
 
-// Available TTS models
-export const ELEVENLABS_MODELS = {
-  TURBO_V2_5: 'eleven_turbo_v2_5',          // Fast & balanced
-  FLASH_V2_5: 'eleven_flash_v2_5',          // Ultra-low latency
-  MULTILINGUAL_V2: 'eleven_multilingual_v2', // Supports many languages
-  MONOLINGUAL_V1: 'eleven_monolingual_v1',  // Original English model
-} as const;
-
-export type ElevenLabsModel = typeof ELEVENLABS_MODELS[keyof typeof ELEVENLABS_MODELS];
-
 interface VoiceSettings {
-  stability: number;
-  similarity_boost: number;
-  style?: number;
-  use_speaker_boost?: boolean;
+  speakingRate?: number;    // 0.25 to 4.0 (default: 1.0)
+  pitch?: number;           // -20.0 to 20.0 (default: 0.0)
+  volumeGainDb?: number;    // -96.0 to 16.0 (default: 0.0)
 }
 
 interface TextToSpeechOptions {
   text: string;
   voiceId?: string;
-  modelId?: ElevenLabsModel;
   voiceSettings?: VoiceSettings;
-  optimize_streaming_latency?: number; // 0-4, higher = lower latency
-  output_format?: 'mp3_44100_128' | 'pcm_16000' | 'pcm_22050' | 'pcm_24000' | 'pcm_44100';
 }
 
 interface TextToSpeechResponse {
@@ -47,10 +35,10 @@ interface TextToSpeechResponse {
 interface Voice {
   voice_id: string;
   name: string;
+  language: string;
+  gender: string;
   category: string;
   description?: string;
-  labels?: Record<string, string>;
-  preview_url?: string;
 }
 
 interface VoicesResponse {
@@ -59,29 +47,15 @@ interface VoicesResponse {
   error?: string;
 }
 
-interface AddVoiceOptions {
-  name: string;
-  description?: string;
-  files: File[];
-  labels?: Record<string, string>;
-}
-
-interface AddVoiceResponse {
-  success: boolean;
-  voiceId?: string;
-  error?: string;
-}
-
 /**
- * Convert text to speech using ElevenLabs
- * Supports multiple models: turbo (fast), flash (lowest latency), multilingual
+ * Convert text to speech using Google Cloud TTS
  */
 export const textToSpeech = async (
   options: TextToSpeechOptions
 ): Promise<TextToSpeechResponse> => {
   try {
-    // Use default voice if none specified (Rachel - pre-made voice)
-    const voiceId = options.voiceId || '21m00Tcm4TlvDq8ikWAM';
+    // Use default voice if none specified (Emily - Neural2 voice)
+    const voiceId = options.voiceId || 'en-US-Neural2-A';
     
     const response = await fetch(`${BACKEND_URL}/api/elevenlabs/tts`, {
       method: 'POST',
@@ -91,12 +65,10 @@ export const textToSpeech = async (
       body: JSON.stringify({
         text: options.text,
         voiceId,
-        modelId: options.modelId || ELEVENLABS_MODELS.TURBO_V2_5,
         voiceSettings: options.voiceSettings || {
-          stability: 0.5,
-          similarity_boost: 0.75,
-          style: 0.0,
-          use_speaker_boost: true,
+          speakingRate: 1.0,
+          pitch: 0.0,
+          volumeGainDb: 0.0,
         },
       }),
     });
@@ -123,7 +95,7 @@ export const textToSpeech = async (
       audioUrl,
     };
   } catch (error) {
-    console.error('ElevenLabs TTS error:', error);
+    console.error('Google TTS error:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -131,134 +103,35 @@ export const textToSpeech = async (
   }
 };
 
-// Hardcoded default voices (public ElevenLabs voices that work without API key)
-const DEFAULT_VOICES: Voice[] = [
-  {
-    voice_id: '21m00Tcm4TlvDq8ikWAM',
-    name: 'Rachel',
-    category: 'premade',
-    description: 'Calm, clear American female voice',
-  },
-  {
-    voice_id: 'AZnzlk1XvdvUeBnXmlld',
-    name: 'Domi',
-    category: 'premade',
-    description: 'Confident American female voice',
-  },
-  {
-    voice_id: 'EXAVITQu4vr4xnSDxMaL',
-    name: 'Bella',
-    category: 'premade',
-    description: 'Soft American female voice',
-  },
-  {
-    voice_id: 'ErXwobaYiN019PkySvjV',
-    name: 'Antoni',
-    category: 'premade',
-    description: 'Well-rounded American male voice',
-  },
-  {
-    voice_id: 'MF3mGyEYCl7XYWbV9V6O',
-    name: 'Elli',
-    category: 'premade',
-    description: 'Emotional American female voice',
-  },
-  {
-    voice_id: 'TxGEqnHWrfWFTfGW9XjX',
-    name: 'Josh',
-    category: 'premade',
-    description: 'Deep American male voice',
-  },
-];
 
 /**
- * Get list of available voices
- * Falls back to default voices if API key is invalid or rate limited
+ * Get list of available voices from Google Cloud TTS
+ * No API key required - voices are hardcoded in backend
  */
 export const getVoices = async (): Promise<VoicesResponse> => {
   try {
     const response = await fetch(`${BACKEND_URL}/api/elevenlabs/voices`);
 
     if (!response.ok) {
-      // If API call fails (401, 429, etc), fall back to default voices
-      console.warn(`Backend API error ${response.status}, using default voices`);
-      return { success: true, voices: DEFAULT_VOICES };
+      throw new Error(`API error: ${response.status}`);
     }
 
     const data = await response.json();
     return {
       success: true,
-      voices: data.voices || DEFAULT_VOICES,
+      voices: data.voices || [],
     };
   } catch (error) {
-    console.warn('Backend API error, using default voices:', error);
-    // Return default voices instead of failing
+    console.error('Failed to load voices:', error);
     return {
-      success: true,
-      voices: DEFAULT_VOICES,
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 };
 
 /**
- * Add a new voice (voice cloning)
- * Note: This feature requires backend implementation for security
- */
-export const addVoice = async (
-  _options: AddVoiceOptions
-): Promise<AddVoiceResponse> => {
-  return { 
-    success: false, 
-    error: 'Voice cloning is not available. This feature requires a paid ElevenLabs subscription and backend implementation.' 
-  };
-};
-
-/**
- * Delete a voice
- * Note: This feature requires backend implementation for security
- */
-export const deleteVoice = async (_voiceId: string): Promise<{ success: boolean; error?: string }> => {
-  return { 
-    success: false, 
-    error: 'Voice management requires backend implementation for security.' 
-  };
-};
-
-/**
- * Get voice details
- * Note: This feature requires backend implementation for security
- */
-export const getVoiceDetails = async (_voiceId: string) => {
-  return { 
-    success: false, 
-    error: 'Voice details require backend implementation for security.' 
-  };
-};
-
-/**
- * Text-to-Speech with streaming support
- * Note: This feature requires backend implementation for security
- */
-export const textToSpeechStream = async (
-  _options: TextToSpeechOptions
-): Promise<ReadableStream<Uint8Array> | null> => {
-  console.warn('Streaming TTS requires backend implementation');
-  return null;
-};
-
-/**
- * Get user info and subscription details
- * Note: This feature requires backend implementation for security
- */
-export const getUserInfo = async () => {
-  return { 
-    success: false, 
-    error: 'User info requires backend implementation for security.' 
-  };
-};
-
-/**
- * Helper function to convert Blob URL to File for voice cloning
+ * Helper function to convert Blob URL to File
  */
 export const blobUrlToFile = async (blobUrl: string, filename: string): Promise<File> => {
   const response = await fetch(blobUrl);
@@ -268,12 +141,7 @@ export const blobUrlToFile = async (blobUrl: string, filename: string): Promise<
 
 export default {
   textToSpeech,
-  textToSpeechStream,
   getVoices,
-  addVoice,
-  deleteVoice,
-  getVoiceDetails,
-  getUserInfo,
   blobUrlToFile,
-  ELEVENLABS_MODELS,
 };
+

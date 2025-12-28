@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import { AgentNodeType, NodeConfig, LLMNodeConfig, STTNodeConfig, TTSNodeConfig, StartNodeConfig, EndNodeConfig } from '../../types';
+import { AgentNodeType, NodeConfig } from '../../types';
 
 interface NodeConfigModalProps {
   nodeId: string | null;

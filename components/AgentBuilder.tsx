@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bot, Sparkles, Save, Play, Edit3, Phone, Terminal, X, Loader2 } from 'lucide-react';
+import { Bot, Sparkles, Save, Edit3, Phone, Terminal, X, Loader2 } from 'lucide-react';
 import { generateAgentScript } from '../services/geminiService';
 import { Agent } from '../types';
 import CallSimulator from './CallSimulator';

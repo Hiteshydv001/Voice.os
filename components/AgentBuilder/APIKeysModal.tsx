@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Key, Check, AlertCircle, ExternalLink } from 'lucide-react';
 import { APIKeyService, APIKeys } from '../../services/apiKeyService';
 
@@ -32,6 +32,8 @@ export function APIKeysModal({ isOpen, onClose }: APIKeysModalProps) {
     setShowKeys((prev) => ({ ...prev, [service]: !prev[service] }));
   };
 
+  // Unused helper functions
+  /*
   const getKeyDisplay = (key: string | undefined, show: boolean) => {
     if (!key) return '';
     if (show) return key;
@@ -42,6 +44,7 @@ export function APIKeysModal({ isOpen, onClose }: APIKeysModalProps) {
     const isValid = APIKeyService.validateKey(service, key);
     return isValid;
   };
+  */
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">

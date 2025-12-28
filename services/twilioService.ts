@@ -65,8 +65,8 @@ export const makeOutboundCall = async (to: string, agentName: string, agentScrip
   // 2. Generate TwiML URL - use backend for AI conversation
   const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
   
-  // Prepare agent data for backend
-  const agentData = {
+  // Prepare agent data for backend (for future use)
+  const _agentData = {
     name: agentName,
     productDescription: agentScript?.opening || '',
     tone: 'professional',

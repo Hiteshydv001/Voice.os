@@ -1,4 +1,3 @@
-import React from 'react';
 import { Play, StopCircle, Brain, Mic, Volume2 } from 'lucide-react';
 import { BaseNode } from './BaseNode';
 

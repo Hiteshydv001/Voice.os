@@ -285,68 +285,6 @@ app.post("/api/elevenlabs/tts", async (req: Request, res: Response) => {
     });
   }
 });
-  }
-
-  try {
-    // Parse voice info from voiceId (format: en-US-Neural2-A)
-    const voiceInfo = GOOGLE_TTS_VOICES.find(v => v.voice_id === voiceId);
-    const languageCode = voiceInfo?.language || 'en-US';
-    const voiceName = voiceId;
-    
-    const response = await fetch(
-      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          input: { text },
-          voice: {
-            languageCode,
-            name: voiceName,
-          },
-          audioConfig: {
-            audioEncoding: "MP3",
-            speakingRate: 1.0,
-            pitch: 0.0,
-            volumeGainDb: 0.0,
-          },
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Google TTS API error: ${response.status} - ${errorText}`);
-      
-      let errorMessage = `Text-to-speech service unavailable: Google Cloud API returned ${response.status}`;
-      
-      if (response.status === 403) {
-        errorMessage = `Google Cloud Text-to-Speech API is not enabled. Please enable it at: https://console.cloud.google.com/apis/library/texttospeech.googleapis.com`;
-      } else if (response.status === 400) {
-        errorMessage = `Invalid voice configuration. Voice ID: ${voiceId}`;
-      }
-      
-      res.status(503).json({ error: errorMessage });
-      return;
-    }
-
-    const data = await response.json();
-    
-    if (!data.audioContent) {
-      res.status(503).json({ error: 'No audio content returned from Google TTS' });
-      return;
-    }
-
-    // Convert base64 to buffer and send as MP3
-    const audioBuffer = Buffer.from(data.audioContent, 'base64');
-    res.setHeader("Content-Type", "audio/mpeg");
-    res.send(audioBuffer);
-    
-  } catch (error: any) {
-    console.warn("Google TTS error:", error);
-    res.status(503).json({ 
-      error: "Text-to-speech service unavailable: " + error.message 
-    });
 
 let currentCall: WebSocket | null = null;
 let currentLogs: WebSocket | null = null;

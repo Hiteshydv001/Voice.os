@@ -137,13 +137,6 @@ const AppContent: React.FC = () => {
     storage.saveLeads(currentUser.uid, []);
   };
 
-  const _handleCreateCampaign = (campaign: Campaign) => {
-    if (!currentUser) return;
-    const updatedCampaigns = [campaign, ...campaigns];
-    setCampaigns(updatedCampaigns);
-    storage.saveCampaigns(currentUser.uid, updatedCampaigns);
-  };
-
   const handleDeleteCampaign = (campaignId: string) => {
     if (!currentUser) return;
     const updatedCampaigns = campaigns.filter(campaign => campaign.id !== campaignId);
@@ -214,7 +207,7 @@ const AppContent: React.FC = () => {
     // 4. Async Loop to process calls
     for (let i = 0; i < targetLeads.length; i++) {
         // Re-check credits before EACH call in case they run out mid-campaign
-        const _freshProfile = await refreshProfile(); 
+        await refreshProfile(); 
         
         const lead = targetLeads[i];
 

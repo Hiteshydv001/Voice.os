@@ -65,23 +65,6 @@ export const makeOutboundCall = async (to: string, agentName: string, agentScrip
   // 2. Generate TwiML URL - use backend for AI conversation
   const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
   
-  // Prepare agent data for backend (for future use)
-  const _agentData = {
-    name: agentName,
-    productDescription: agentScript?.opening || '',
-    tone: 'professional',
-    goal: 'Engage customer and achieve sales objective',
-    script: agentScript || {
-      opening: `Hello! This is ${agentName} from Voice Marketing AI.`,
-      closing: 'Thank you for your time. Have a great day!',
-      objectionHandling: 'I understand your concern. Let me address that.'
-    }
-  };
-
-  // Construct System Prompt (for reference, not used in call)
-  // const systemPrompt = `You are ${agentData.name}...`;
-  // const initialGreeting = agentData.script.opening;
-  
   // Backend endpoint handles TwiML generation and WebSocket stream
   // UPDATED: Pointing to OpenAI Realtime endpoint (Clean URL, no params)
   const twimlUrl = `${backendUrl}/voice/openai/incoming`;

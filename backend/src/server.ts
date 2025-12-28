@@ -214,9 +214,50 @@ app.post("/api/gemini/generate", async (req: Request, res: Response) => {
 });
 
 // ============= ElevenLabs API Proxy =============
+// Default voices fallback (same as frontend)
+const DEFAULT_VOICES = [
+  {
+    voice_id: '21m00Tcm4TlvDq8ikWAM',
+    name: 'Rachel',
+    category: 'premade',
+    description: 'Calm, clear American female voice',
+  },
+  {
+    voice_id: 'AZnzlk1XvdvUeBnXmlld',
+    name: 'Domi',
+    category: 'premade',
+    description: 'Confident American female voice',
+  },
+  {
+    voice_id: 'EXAVITQu4vr4xnSDxMaL',
+    name: 'Bella',
+    category: 'premade',
+    description: 'Soft American female voice',
+  },
+  {
+    voice_id: 'ErXwobaYiN019PkySvjV',
+    name: 'Antoni',
+    category: 'premade',
+    description: 'Well-rounded American male voice',
+  },
+  {
+    voice_id: 'MF3mGyEYCl7XYWbV9V6O',
+    name: 'Elli',
+    category: 'premade',
+    description: 'Emotional American female voice',
+  },
+  {
+    voice_id: 'TxGEqnHWrfWFTfGW9XjX',
+    name: 'Josh',
+    category: 'premade',
+    description: 'Deep American male voice',
+  },
+];
+
 app.get("/api/elevenlabs/voices", async (req: Request, res: Response) => {
   if (!ELEVENLABS_API_KEY) {
-    res.status(500).json({ error: "ElevenLabs API key not configured" });
+    console.warn("ElevenLabs API key not configured, using default voices");
+    res.json({ voices: DEFAULT_VOICES });
     return;
   }
 
@@ -226,14 +267,18 @@ app.get("/api/elevenlabs/voices", async (req: Request, res: Response) => {
     });
 
     if (!response.ok) {
-      throw new Error(`ElevenLabs API error: ${response.status}`);
+      // If API returns 401/403/429, fall back to default voices
+      console.warn(`ElevenLabs API error ${response.status}, using default voices`);
+      res.json({ voices: DEFAULT_VOICES });
+      return;
     }
 
     const data = await response.json();
     res.json(data);
   } catch (error: any) {
-    console.error("ElevenLabs voices error:", error);
-    res.status(500).json({ error: error.message });
+    console.warn("ElevenLabs voices error, using default voices:", error);
+    // Return default voices instead of 500 error
+    res.json({ voices: DEFAULT_VOICES });
   }
 });
 

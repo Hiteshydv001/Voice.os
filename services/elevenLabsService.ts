@@ -1,28 +1,37 @@
 /**
- * Google Cloud Text-to-Speech Service (formerly ElevenLabs)
- * Switched to Google TTS for reliable free tier access
- * 
- * Free Tier: 1 million characters/month (Standard voices)
- * API: https://cloud.google.com/text-to-speech/docs
+ * ElevenLabs Text-to-Speech Service
+ * API Documentation: https://elevenlabs.io/docs
  * 
  * Features:
- * - 40+ languages supported
- * - Natural sounding voices (Neural2 & Standard)
- * - Multiple voice options per language
- * - Better free tier than ElevenLabs
+ * - Text-to-Speech with multiple models
+ * - Hardcoded public voices (no API call for voice list)
+ * - Backend proxy for security
+ * 
+ * Note: All API calls are proxied through backend for security
  */
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8081';
 
+// Available TTS models
+export const ELEVENLABS_MODELS = {
+  TURBO_V2_5: 'eleven_turbo_v2_5',
+  MONOLINGUAL_V1: 'eleven_monolingual_v1',
+  MULTILINGUAL_V2: 'eleven_multilingual_v2',
+} as const;
+
+export type ElevenLabsModel = typeof ELEVENLABS_MODELS[keyof typeof ELEVENLABS_MODELS];
+
 interface VoiceSettings {
-  speakingRate?: number;    // 0.25 to 4.0 (default: 1.0)
-  pitch?: number;           // -20.0 to 20.0 (default: 0.0)
-  volumeGainDb?: number;    // -96.0 to 16.0 (default: 0.0)
+  stability: number;
+  similarity_boost: number;
+  style?: number;
+  use_speaker_boost?: boolean;
 }
 
 interface TextToSpeechOptions {
   text: string;
   voiceId?: string;
+  modelId?: ElevenLabsModel;
   voiceSettings?: VoiceSettings;
 }
 
@@ -35,8 +44,6 @@ interface TextToSpeechResponse {
 interface Voice {
   voice_id: string;
   name: string;
-  language: string;
-  gender: string;
   category: string;
   description?: string;
 }
@@ -48,14 +55,13 @@ interface VoicesResponse {
 }
 
 /**
- * Convert text to speech using Google Cloud TTS
+ * Convert text to speech using ElevenLabs
  */
 export const textToSpeech = async (
   options: TextToSpeechOptions
 ): Promise<TextToSpeechResponse> => {
   try {
-    // Use default voice if none specified (Emily - Neural2 voice)
-    const voiceId = options.voiceId || 'en-US-Neural2-A';
+    const voiceId = options.voiceId || '21m00Tcm4TlvDq8ikWAM';
     
     const response = await fetch(`${BACKEND_URL}/api/elevenlabs/tts`, {
       method: 'POST',
@@ -65,10 +71,10 @@ export const textToSpeech = async (
       body: JSON.stringify({
         text: options.text,
         voiceId,
+        modelId: options.modelId || ELEVENLABS_MODELS.MONOLINGUAL_V1,
         voiceSettings: options.voiceSettings || {
-          speakingRate: 1.0,
-          pitch: 0.0,
-          volumeGainDb: 0.0,
+          stability: 0.5,
+          similarity_boost: 0.75,
         },
       }),
     });
@@ -76,17 +82,9 @@ export const textToSpeech = async (
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Backend TTS error:', errorText);
-      
-      if (response.status === 401) {
-        throw new Error('Invalid API key or unauthorized access');
-      } else if (response.status === 422) {
-        throw new Error('Invalid voice ID or request parameters');
-      } else {
-        throw new Error(`API request failed: ${response.status}`);
-      }
+      throw new Error(`API request failed: ${response.status}`);
     }
 
-    // Convert response to blob and create URL
     const audioBlob = await response.blob();
     const audioUrl = URL.createObjectURL(audioBlob);
 
@@ -95,7 +93,7 @@ export const textToSpeech = async (
       audioUrl,
     };
   } catch (error) {
-    console.error('Google TTS error:', error);
+    console.error('ElevenLabs TTS error:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -105,8 +103,7 @@ export const textToSpeech = async (
 
 
 /**
- * Get list of available voices from Google Cloud TTS
- * No API key required - voices are hardcoded in backend
+ * Get list of available voices from backend
  */
 export const getVoices = async (): Promise<VoicesResponse> => {
   try {
@@ -143,5 +140,6 @@ export default {
   textToSpeech,
   getVoices,
   blobUrlToFile,
+  ELEVENLABS_MODELS,
 };
 

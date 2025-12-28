@@ -38,6 +38,7 @@ const VoiceCloning: React.FC = () => {
 
   // TTS State
   const [testText, setTestText] = useState('Hello! This is a test of the voice synthesis system.');
+  const [selectedModel, setSelectedModel] = useState('eleven_monolingual_v1');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedAudioUrl, setGeneratedAudioUrl] = useState<string | null>(null);
 
@@ -216,6 +217,7 @@ const VoiceCloning: React.FC = () => {
       const response = await elevenLabsService.textToSpeech({
         text: testText,
         voiceId: selectedVoice,
+        modelId: selectedModel as any,
       });
       
       if (response.success && response.audioUrl) {
@@ -602,6 +604,22 @@ const VoiceCloning: React.FC = () => {
                   </select>
                 </div>
 
+                {/* Model Selection */}
+                <div>
+                  <label className="block text-sm font-bold uppercase mb-2 tracking-wide">
+                    TTS Model
+                  </label>
+                  <select
+                    value={selectedModel}
+                    onChange={(e) => setSelectedModel(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-black font-mono font-bold focus:outline-none focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all"
+                  >
+                    <option value="eleven_monolingual_v1">MONOLINGUAL V1 [FREE TIER]</option>
+                    <option value="eleven_turbo_v2_5">TURBO V2.5 [PAID]</option>
+                    <option value="eleven_multilingual_v2">MULTILINGUAL V2 [PAID]</option>
+                  </select>
+                </div>
+
                 {/* Text Input */}
                 <div>
                   <label className="block text-sm font-bold uppercase mb-2 tracking-wide">
@@ -671,6 +689,7 @@ const VoiceCloning: React.FC = () => {
                               text: testText.substring(0, 100),
                               voiceId: selectedVoice,
                               voiceName,
+                              model: selectedModel,
                             });
                             showNotif('TTS audio saved to library!');
                           }}

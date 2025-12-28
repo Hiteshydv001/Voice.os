@@ -246,13 +246,13 @@ export function APIKeysModal({ isOpen, onClose }: APIKeysModalProps) {
             )}
           </div>
 
-          {/* ElevenLabs API Key */}
+          {/* Minimax API Key */}
           <div className="border-2 border-black p-4">
             <div className="flex items-start justify-between mb-3">
               <div>
-                <h3 className="font-bold text-sm uppercase mb-1">ElevenLabs API</h3>
+                <h3 className="font-bold text-sm uppercase mb-1">Minimax API</h3>
                 <a
-                  href="https://elevenlabs.io/app/settings/api-keys"
+                  href="https://platform.minimaxi.com/user-center/basic-information/interface-key"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-xs text-blue-600 hover:underline flex items-center gap-1"
@@ -278,7 +278,7 @@ export function APIKeysModal({ isOpen, onClose }: APIKeysModalProps) {
                 }
                 className="w-4 h-4"
               />
-              <span className="text-sm font-bold">Use my own ElevenLabs API key</span>
+              <span className="text-sm font-bold">Use my own Minimax API key</span>
             </label>
 
             {keys.useOwnElevenlabs && (
@@ -289,7 +289,7 @@ export function APIKeysModal({ isOpen, onClose }: APIKeysModalProps) {
                   onChange={(e) =>
                     setKeys({ ...keys, elevenlabsApiKey: e.target.value })
                   }
-                  placeholder="Your ElevenLabs API key"
+                  placeholder="Your Minimax API key"
                   className="w-full px-3 py-2 border-2 border-black font-mono text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 pr-20"
                 />
                 <button

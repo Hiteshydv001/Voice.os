@@ -4,7 +4,7 @@ export const agentTemplates: AgentTemplate[] = [
   {
     id: 'voice-assistant',
     name: 'Voice Assistant',
-    description: 'Complete voice AI: Audio → Deepgram → Gemini → ElevenLabs',
+    description: 'Complete voice AI: Audio → Deepgram → Gemini → Minimax',
     category: 'voice',
     flow: {
       name: 'Voice Assistant',
@@ -52,10 +52,10 @@ export const agentTemplates: AgentTemplate[] = [
           type: 'tts',
           position: { x: 700, y: 200 },
           data: {
-            label: 'ElevenLabs TTS',
+            label: 'Minimax TTS',
             config: {
-              voice: '21m00Tcm4TlvDq8ikWAM', // Rachel
-              model: 'eleven_turbo_v2',
+              voice: 'English_Graceful_Lady',
+              model: 'speech-02-turbo',
             },
           },
         },
@@ -134,7 +134,7 @@ export const agentTemplates: AgentTemplate[] = [
   {
     id: 'text-to-speech',
     name: 'Text to Speech',
-    description: 'Convert text to natural voice with ElevenLabs',
+    description: 'Convert text to natural voice with Minimax',
     category: 'voice',
     flow: {
       name: 'Text to Speech',
@@ -156,10 +156,10 @@ export const agentTemplates: AgentTemplate[] = [
           type: 'tts',
           position: { x: 500, y: 200 },
           data: {
-            label: 'ElevenLabs',
+            label: 'Minimax TTS',
             config: {
-              voice: 'adam',
-              model: 'eleven_multilingual_v2',
+              voice: 'English_Persuasive_Man',
+              model: 'speech-02-turbo',
             },
           },
         },

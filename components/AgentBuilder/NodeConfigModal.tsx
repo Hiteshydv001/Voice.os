@@ -188,7 +188,7 @@ export function NodeConfigModal({
           <div className="space-y-4">
             <div>
               <label className="block text-xs font-bold uppercase mb-2">
-                ElevenLabs Voice
+                Minimax Voice
               </label>
               <select
                 value={config.voice || '21m00Tcm4TlvDq8ikWAM'}

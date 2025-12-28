@@ -39,7 +39,7 @@ const nodeItems: Array<{
     icon: Volume2,
     label: 'Text-to-Speech',
     color: 'bg-orange-100 border-orange-500',
-    description: 'ElevenLabs voice synthesis',
+    description: 'Minimax voice synthesis',
   },
   {
     type: 'end',

@@ -443,7 +443,7 @@ const VoiceCloning: React.FC = () => {
                 <h3 className="font-black uppercase">Voice Cloning → Coming Soon</h3>
               </div>
               <p className="text-sm font-bold">
-                Custom voice cloning requires an upgraded ElevenLabs subscription. Feature in development for future release.
+                Custom voice cloning requires an upgraded Minimax subscription. Feature in development for future release.
               </p>
             </div>
 
@@ -541,7 +541,7 @@ const VoiceCloning: React.FC = () => {
                 <h3 className="font-black uppercase">Voice Cloning → Coming Soon</h3>
               </div>
               <p className="text-sm font-bold">
-                Custom voice cloning requires an upgraded ElevenLabs subscription. Feature in development for future release.
+                Custom voice cloning requires an upgraded Minimax subscription. Feature in development for future release.
               </p>
             </div>
 

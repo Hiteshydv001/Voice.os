@@ -22,6 +22,14 @@ const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || "";
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || "";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 const MINIMAX_API_KEY = process.env.MINIMAX_API_KEY || "";
+const GROQ_API_KEY = process.env.GROQ_API_KEY || "";
+
+console.log("🔑 Environment variables loaded:");
+console.log("   OPENAI_API_KEY:", OPENAI_API_KEY ? "✅ Set" : "❌ Missing");
+console.log("   GEMINI_API_KEY:", GEMINI_API_KEY ? "✅ Set" : "❌ Missing");
+console.log("   MINIMAX_API_KEY:", MINIMAX_API_KEY ? "✅ Set" : "❌ Missing");
+console.log("   GROQ_API_KEY:", GROQ_API_KEY ? "✅ Set" : "❌ Missing");
+console.log("   TWILIO_ACCOUNT_SID:", TWILIO_ACCOUNT_SID ? "✅ Set" : "❌ Missing");
 
 if (!OPENAI_API_KEY) {
   console.error("OPENAI_API_KEY environment variable is required");
@@ -223,9 +231,10 @@ app.post("/api/gemini/generate", async (req: Request, res: Response) => {
 
 // ============= Groq API Proxy =============
 app.post("/api/groq/chat", async (req: Request, res: Response) => {
-  const GROQ_API_KEY = process.env.GROQ_API_KEY || "";
+  console.log("🔍 Groq endpoint hit - API key status:", GROQ_API_KEY ? "✅ Present" : "❌ Missing");
   
   if (!GROQ_API_KEY) {
+    console.error("❌ GROQ_API_KEY environment variable not set");
     res.status(500).json({ error: "Groq API key not configured" });
     return;
   }

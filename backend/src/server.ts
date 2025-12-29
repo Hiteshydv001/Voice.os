@@ -100,23 +100,22 @@ app.get("/twiml", (req, res) => {
       res.status(500).send("PUBLIC_URL environment variable is not configured");
       return;
     }
+    
+    // Get CallSid from Twilio request
+    const twilioCallSid = req.query.CallSid as string;
+    const callId = req.query.callId as string || (twilioCallSid ? callSidToCallId.get(twilioCallSid) : undefined);
+    
+    console.log(`📞 TwiML request received (GET). Twilio CallSid: ${twilioCallSid}, Our callId: ${callId}`);
+    
     const wsUrl = new URL(PUBLIC_URL);
     wsUrl.protocol = "wss:";
     wsUrl.pathname = `/call`;
     
-    // Get callId from query params if present
-    const callId = req.query.callId as string;
-    console.log(`📞 TwiML request received (GET). CallId: ${callId}`);
-    
     if (callId) {
-      // Store callId in a custom parameter that will be sent with Stream start event
-      wsUrl.searchParams.set('callId', callId);
-      console.log(`🔗 WebSocket URL with callId:`, wsUrl.toString());
-    } else {
-      console.warn(`⚠️ No callId in TwiML request query params`);
+      console.log(`🔗 Building WebSocket URL for callId: ${callId}`);
     }
 
-    // Build TwiML with Stream parameters
+    // Build TwiML with Stream parameters - pass callId via custom parameter
     const twimlWithParams = callId 
       ? `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
@@ -264,6 +263,11 @@ app.post("/api/twilio/call", async (req: Request, res: Response) => {
       recordingStatusCallbackEvent: ['completed'],
     });
     console.log(`📞 Call initiated with SID: ${call.sid}, recording enabled`);
+    
+    // Map the Twilio CallSid to our callId for later retrieval
+    callSidToCallId.set(call.sid, callId);
+    console.log(`🔗 Mapped CallSid ${call.sid} to callId ${callId}`);
+    
     res.json({ success: true, callSid: call.sid, callId });
   } catch (error: any) {
     console.error("Error initiating call:", error);
@@ -630,6 +634,7 @@ let currentLogs: WebSocket | null = null;
 
 // Store for pending call configurations
 const pendingCallConfigs = new Map<string, any>();
+const callSidToCallId = new Map<string, string>(); // Map Twilio CallSid to our callId
 
 wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
   const fullUrl = req.url || "/";
@@ -641,51 +646,10 @@ wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
     if (currentCall) currentCall.close();
     currentCall = ws;
     
-    // Parse callId from query params (e.g., /call?callId=xyz)
-    let callId: string | null = null;
-    try {
-      const url = new URL(fullUrl, `http://${req.headers.host}`);
-      callId = url.searchParams.get('callId');
-    } catch (e) {
-      // Fallback: parse manually if URL parsing fails
-      const match = fullUrl.match(/[?&]callId=([^&]+)/);
-      if (match) callId = match[1];
-    }
+    console.log(`🔌 WebSocket connected. Waiting for Stream start event with callId...`);
     
-    console.log(`🔌 WebSocket connected. CallId from URL: ${callId}`);
-    
-    // Try to get agent config from callId
-    let agentConfig = callId ? pendingCallConfigs.get(callId) : undefined;
-    
-    if (agentConfig) {
-      console.log(`✅ Retrieved agent config from URL callId ${callId}:`, JSON.stringify(agentConfig));
-      if (callId) pendingCallConfigs.delete(callId);
-    } else {
-      console.warn(`⚠️ No agent config found for URL callId ${callId}. Will check Stream start event parameters.`);
-      
-      // Listen for 'start' event to get callId from Stream parameters
-      ws.once('message', (data) => {
-        try {
-          const msg = JSON.parse(data.toString());
-          if (msg.event === 'start' && msg.start?.customParameters?.callId) {
-            const streamCallId = msg.start.customParameters.callId;
-            console.log(`📦 Received callId from Stream parameters: ${streamCallId}`);
-            agentConfig = pendingCallConfigs.get(streamCallId);
-            if (agentConfig) {
-              console.log(`✅ Retrieved agent config from Stream callId ${streamCallId}:`, JSON.stringify(agentConfig));
-              pendingCallConfigs.delete(streamCallId);
-              // Update session with the correct config
-              handleCallConnection(currentCall!, OPENAI_API_KEY, agentConfig);
-              return;
-            }
-          }
-        } catch (e) {
-          console.error('Error parsing start message:', e);
-        }
-      });
-    }
-    
-    handleCallConnection(currentCall, OPENAI_API_KEY, agentConfig);
+    // Pass pendingCallConfigs map to session manager so it can retrieve config from start event
+    handleCallConnection(currentCall, OPENAI_API_KEY, undefined, pendingCallConfigs);
   } else if (pathname === "/logs") {
     if (currentLogs) currentLogs.close();
     currentLogs = ws;

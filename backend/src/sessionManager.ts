@@ -17,6 +17,7 @@ interface Session {
     goal?: string;
     tone?: string;
   };
+  pendingCallConfigs?: Map<string, any>; // Reference to pending configs
 }
 
 let session: Session = {};
@@ -24,7 +25,8 @@ let session: Session = {};
 export function handleCallConnection(
   ws: WebSocket,
   openAIApiKey: string,
-  agentConfig?: { name: string; opening: string; goal?: string; tone?: string }
+  agentConfig?: { name: string; opening: string; goal?: string; tone?: string },
+  pendingConfigs?: Map<string, any>
 ) {
   cleanupConnection(session.twilioConn);
   session.twilioConn = ws;
@@ -35,6 +37,7 @@ export function handleCallConnection(
     goal: "assist the customer",
     tone: "Professional and friendly"
   };
+  session.pendingCallConfigs = pendingConfigs;
 
   ws.on("message", handleTwilioMessage);
   ws.on("error", ws.close);
@@ -101,6 +104,20 @@ function handleTwilioMessage(data: RawData) {
       session.latestMediaTimestamp = 0;
       session.lastAssistantItem = undefined;
       session.responseStartTimestamp = undefined;
+      
+      // Check if callId is in customParameters from Stream <Parameter> tags
+      if (msg.start?.customParameters?.callId && session.pendingCallConfigs) {
+        const callId = msg.start.customParameters.callId;
+        console.log(`📦 Received callId from Stream parameters: ${callId}`);
+        
+        const agentConfig = session.pendingCallConfigs.get(callId);
+        if (agentConfig) {
+          console.log(`✅ Retrieved agent config from Stream callId:`, JSON.stringify(agentConfig));
+          session.agentConfig = agentConfig;
+          session.pendingCallConfigs.delete(callId);
+        }
+      }
+      
       tryConnectModel();
       break;
     case "media":

@@ -10,6 +10,11 @@ service cloud.firestore {
       match /data/{document=**} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
+      
+      // Traffic analytics - users can read/write their own traffic data
+      match /trafficAnalytics/{weekId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
     }
     
     // Agent flows - users can read/write their own flows

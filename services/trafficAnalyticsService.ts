@@ -188,9 +188,15 @@ export const subscribeToWeeklyTraffic = (
     return () => {};
   }
 
+  const weekStart = getWeekStart();
+  const weekId = formatDate(weekStart);
+  console.log(`📊 Subscribing to traffic analytics: users/${userId}/trafficAnalytics/${weekId}`);
+  
   const docRef = getWeekDocRef(userId);
   
   return onSnapshot(docRef, (snapshot) => {
+    console.log(`📊 Snapshot received. Exists: ${snapshot.exists()}`);
+    
     if (!snapshot.exists()) {
       // Return empty data for the current week
       const days = initializeWeeklyData();
@@ -215,6 +221,17 @@ export const subscribeToWeeklyTraffic = (
     callback(chartData);
   }, (error) => {
     console.error('Error in traffic analytics subscription:', error);
+    console.error('Error code:', error.code);
+    console.error('Error message:', error.message);
+    // Return empty data on error
+    const days = initializeWeeklyData();
+    const emptyData = Object.entries(days).map(([name, data]) => ({
+      name,
+      calls: data.calls,
+      conversions: data.conversions,
+      date: data.date
+    }));
+    callback(emptyData);
   });
 };
 

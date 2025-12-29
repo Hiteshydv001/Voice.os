@@ -1,3 +1,5 @@
+import { Agent } from '../types';
+
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8081';
 
 const replaceAgentNameInScript = (script: string, agentName: string): string => {
@@ -9,7 +11,7 @@ const replaceAgentNameInScript = (script: string, agentName: string): string => 
   });
 };
 
-export const makeOutboundCall = async (to: string, agentName: string, agentScript?: { opening: string; closing: string; objectionHandling: string }) => {
+export const makeOutboundCall = async (to: string, agent: Agent) => {
   // Check if Twilio is configured via backend
   try {
     const checkResponse = await fetch(`${BACKEND_URL}/api/twilio`);
@@ -17,11 +19,11 @@ export const makeOutboundCall = async (to: string, agentName: string, agentScrip
     
     if (!credentialsSet) {
       console.log('🔊 SIMULATION MODE: Twilio not configured on backend');
-      return simulateCall(to, agentName);
+      return simulateCall(to, agent.name);
     }
   } catch (error) {
     console.warn('Could not check Twilio status, using simulation mode', error);
-    return simulateCall(to, agentName);
+    return simulateCall(to, agent.name);
   }
 
   // Get phone numbers from backend
@@ -42,12 +44,12 @@ export const makeOutboundCall = async (to: string, agentName: string, agentScrip
       body: JSON.stringify({ 
         to, 
         from,
-        agentName,
-        agentScript: agentScript ? {
-          opening: replaceAgentNameInScript(agentScript.opening, agentName),
-          goal: agentScript.objectionHandling || 'assist the customer',
-          tone: 'Professional and friendly'
-        } : undefined
+        agentName: agent.name,
+        agentScript: {
+          opening: replaceAgentNameInScript(agent.script.opening, agent.name),
+          goal: agent.goal,
+          tone: agent.tone
+        }
       }),
     });
 

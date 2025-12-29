@@ -266,7 +266,7 @@ const AppContent: React.FC = () => {
             // Perform the call with agent's custom script
             const callStartTime = Date.now();
             const callStartTimeISO = new Date().toISOString();
-            await makeOutboundCall(lead.phone, agent.name, agent.script);
+            await makeOutboundCall(lead.phone, agent);
             const callDuration = Math.floor((Date.now() - callStartTime) / 1000);
 
             // Record successful call result

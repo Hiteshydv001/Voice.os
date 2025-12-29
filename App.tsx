@@ -266,7 +266,7 @@ const AppContent: React.FC = () => {
             // Perform the call with agent's custom script
             const callStartTime = Date.now();
             const callStartTimeISO = new Date().toISOString();
-            await makeOutboundCall(lead.phone, agent);
+            const callResponse = await makeOutboundCall(lead.phone, agent);
             const callDuration = Math.floor((Date.now() - callStartTime) / 1000);
 
             // Record successful call result
@@ -282,10 +282,11 @@ const AppContent: React.FC = () => {
             };
             callResults.push(callResult);
 
-            // Save to Call History
+            // Save to Call History with callSid for recording retrieval
             const callHistoryRecord: CallHistoryRecord = {
                 id: `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                 userId: currentUser.uid,
+                callSid: callResponse?.callSid, // Store Twilio Call SID for recording retrieval
                 agentId: agent.id,
                 agentName: agent.name,
                 leadId: lead.id,

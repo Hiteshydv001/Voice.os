@@ -213,10 +213,58 @@ app.post("/api/twilio/call", async (req: Request, res: Response) => {
       url: `${PUBLIC_URL}/twiml?callId=${callId}`,
       to,
       from,
+      record: true, // Enable call recording
+      recordingStatusCallback: `${PUBLIC_URL}/api/twilio/recording-callback`,
+      recordingStatusCallbackEvent: ['completed'],
     });
-    res.json({ success: true, callSid: call.sid });
+    console.log(`📞 Call initiated with SID: ${call.sid}, recording enabled`);
+    res.json({ success: true, callSid: call.sid, callId });
   } catch (error: any) {
     console.error("Error initiating call:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Recording callback endpoint - called by Twilio when recording is ready
+app.post("/api/twilio/recording-callback", async (req: Request, res: Response) => {
+  const { CallSid, RecordingUrl, RecordingSid, RecordingDuration } = req.body;
+  console.log(`🎙️ Recording completed for call ${CallSid}:`);
+  console.log(`   Recording SID: ${RecordingSid}`);
+  console.log(`   Recording URL: ${RecordingUrl}`);
+  console.log(`   Duration: ${RecordingDuration}s`);
+  
+  // Store this in a map so frontend can retrieve it
+  // In production, you'd update the database here
+  res.sendStatus(200);
+});
+
+// Get recording URL for a call
+app.get("/api/twilio/recording/:callSid", async (req: Request, res: Response) => {
+  const { callSid } = req.params;
+  
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
+    res.status(500).json({ error: "Twilio credentials not configured" });
+    return;
+  }
+  
+  try {
+    const client = new Twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+    const recordings = await client.recordings.list({ callSid, limit: 1 });
+    
+    if (recordings.length > 0) {
+      const recording = recordings[0];
+      // Construct full URL for recording download
+      const recordingUrl = `https://api.twilio.com${recording.uri.replace('.json', '.mp3')}`;
+      res.json({ 
+        recordingUrl,
+        recordingSid: recording.sid,
+        duration: recording.duration 
+      });
+    } else {
+      res.status(404).json({ error: "No recording found for this call" });
+    }
+  } catch (error: any) {
+    console.error("Error fetching recording:", error);
     res.status(500).json({ error: error.message });
   }
 });

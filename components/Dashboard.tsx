@@ -90,7 +90,7 @@ const Dashboard: React.FC<DashboardProps> = ({ agents = [], logs = [], onAddLog 
         const callStartTimeISO = new Date().toISOString();
         
         // Call the real Twilio Service with full agent object
-        await makeOutboundCall(dialerNumber, agent);
+        const callResult = await makeOutboundCall(dialerNumber, agent);
         
         const callDuration = Math.floor((Date.now() - callStartTime) / 1000);
         
@@ -110,10 +110,11 @@ const Dashboard: React.FC<DashboardProps> = ({ agents = [], logs = [], onAddLog 
         };
         onAddLog(newLog);
 
-        // Save to Call History
+        // Save to Call History with callSid for recording retrieval
         const callHistoryRecord: import('../types').CallHistoryRecord = {
           id: `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           userId: currentUser.uid,
+          callSid: callResult?.callSid, // Store Twilio Call SID for recording retrieval
           agentId: agent.id,
           agentName: agent.name,
           leadPhone: dialerNumber,

@@ -59,8 +59,14 @@ export const makeOutboundCall = async (to: string, agent: Agent) => {
     }
 
     const data = await callResponse.json();
-    console.log('✅ Call initiated successfully:', data.callSid);
-    return data;
+    console.log('✅ Call initiated successfully:', data);
+    
+    // Return data including callSid and callId for recording retrieval
+    return {
+      callSid: data.callSid,
+      callId: data.callId,
+      status: data.status
+    };
   } catch (error: any) {
     console.error("❌ Twilio Call Failed:", error);
     throw error;

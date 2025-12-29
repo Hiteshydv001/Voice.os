@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../services/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { Phone, Clock, FileText, PlayCircle, Download, Filter, Search, Calendar, TrendingUp, AlertCircle, CheckCircle, XCircle, Terminal } from 'lucide-react';
 import { CallHistoryRecord } from '../types';
+import { fetchRecordingUrl, downloadRecording } from '../services/recordingService';
 
 const CallHistory: React.FC = () => {
   const { currentUser } = useAuth();
@@ -45,6 +46,63 @@ const CallHistory: React.FC = () => {
       console.error('Error loading call history:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch recording URL for a call if not already available
+  const loadRecordingUrl = async (call: CallHistoryRecord) => {
+    if (call.recordingUrl || !call.callSid) return;
+
+    try {
+      const url = await fetchRecordingUrl(call.callSid);
+      if (url) {
+        // Update the call in state
+        setCalls(prevCalls => 
+          prevCalls.map(c => 
+            c.id === call.id ? { ...c, recordingUrl: url } : c
+          )
+        );
+        
+        // Update in Firestore
+        if (currentUser) {
+          const callRef = doc(db, 'call_history', call.id);
+          await updateDoc(callRef, { recordingUrl: url });
+        }
+      }
+    } catch (error) {
+      console.error('Error loading recording URL:', error);
+    }
+  };
+
+  const handlePlayRecording = async (call: CallHistoryRecord) => {
+    if (!call.recordingUrl && call.callSid) {
+      // Try to fetch the recording URL first
+      await loadRecordingUrl(call);
+    }
+    
+    if (call.recordingUrl) {
+      window.open(call.recordingUrl, '_blank');
+    } else {
+      alert('Recording not available yet. Please try again in a few moments.');
+    }
+  };
+
+  const handleDownloadRecording = async (call: CallHistoryRecord) => {
+    if (!call.recordingUrl && call.callSid) {
+      await loadRecordingUrl(call);
+    }
+
+    if (call.recordingUrl) {
+      try {
+        await downloadRecording(
+          call.recordingUrl, 
+          `recording_${call.agentName}_${call.leadPhone}_${call.timestamp}.mp3`
+        );
+      } catch (error) {
+        alert('Failed to download recording. Please try again.');
+      }
+    } else {
+      alert('Recording not available yet. Please try again in a few moments.');
     }
   };
 
@@ -342,17 +400,29 @@ Recording URL: ${call.recordingUrl || 'Not available'}
                     {call.status}
                   </span>
                   <div className="flex gap-2">
-                    {call.recordingUrl && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          window.open(call.recordingUrl, '_blank');
-                        }}
-                        className="p-2 bg-blue-600 border-2 border-black text-white hover:bg-blue-700 transition-colors"
-                        title="Play Recording"
-                      >
-                        <PlayCircle className="h-4 w-4" />
-                      </button>
+                    {call.callSid && (
+                      <>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePlayRecording(call);
+                          }}
+                          className="p-2 bg-blue-600 border-2 border-black text-white hover:bg-blue-700 transition-colors"
+                          title="Play Recording"
+                        >
+                          <PlayCircle className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDownloadRecording(call);
+                          }}
+                          className="p-2 bg-purple-600 border-2 border-black text-white hover:bg-purple-700 transition-colors"
+                          title="Download Recording"
+                        >
+                          <Download className="h-4 w-4" />
+                        </button>
+                      </>
                     )}
                     <button
                       onClick={(e) => {
@@ -362,7 +432,7 @@ Recording URL: ${call.recordingUrl || 'Not available'}
                       className="p-2 bg-black border-2 border-black text-white hover:bg-stone-800 transition-colors"
                       title="Download Report"
                     >
-                      <Download className="h-4 w-4" />
+                      <FileText className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
@@ -485,20 +555,29 @@ Recording URL: ${call.recordingUrl || 'Not available'}
 
             {/* Modal Footer */}
             <div className="border-t-4 border-black p-4 bg-stone-100 flex gap-3">
-              {selectedCall.recordingUrl && (
-                <button
-                  onClick={() => window.open(selectedCall.recordingUrl, '_blank')}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white border-2 border-black font-bold uppercase hover:bg-blue-700 transition-colors"
-                >
-                  <PlayCircle className="h-5 w-5" />
-                  Play Recording
-                </button>
+              {selectedCall.callSid && (
+                <>
+                  <button
+                    onClick={() => handlePlayRecording(selectedCall)}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white border-2 border-black font-bold uppercase hover:bg-blue-700 transition-colors"
+                  >
+                    <PlayCircle className="h-5 w-5" />
+                    Play Recording
+                  </button>
+                  <button
+                    onClick={() => handleDownloadRecording(selectedCall)}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white border-2 border-black font-bold uppercase hover:bg-purple-700 transition-colors"
+                  >
+                    <Download className="h-5 w-5" />
+                    Download Recording
+                  </button>
+                </>
               )}
               <button
                 onClick={() => downloadTranscript(selectedCall)}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-black text-white border-2 border-black font-bold uppercase hover:bg-stone-800 transition-colors"
               >
-                <Download className="h-5 w-5" />
+                <FileText className="h-5 w-5" />
                 Download Report
               </button>
             </div>

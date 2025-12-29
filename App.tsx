@@ -308,6 +308,12 @@ const AppContent: React.FC = () => {
             };
             await storage.saveCallHistory(currentUser.uid, callHistoryRecord);
 
+            // Track call in real-time traffic analytics
+            const isConversion = callResult.sentiment === 'Positive'; // Consider positive sentiment as conversion
+            await import('./services/trafficAnalyticsService').then(module => 
+                module.trackCall(currentUser.uid, isConversion)
+            );
+
             // DEDUCT CREDITS
             await deductCredits(currentUser.uid, costPerCall);
             refreshProfile(); // Trigger UI update for credit counter

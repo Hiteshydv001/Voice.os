@@ -170,6 +170,23 @@ function tryConnectModel() {
     const agentTone = session.agentConfig?.tone || "Professional, friendly, and concise";
     const agentOpening = session.agentConfig?.opening || `Hello! This is ${agentName}. How can I help you today?`;
     
+    // Build comprehensive system instructions
+    const systemInstructions = `You are ${agentName}, NOT a virtual assistant. 
+
+CRITICAL RULES:
+- NEVER say "I am a virtual assistant" or "I am an AI assistant"
+- You are specifically ${agentName}
+- Your goal: ${agentGoal}
+- Your tone: ${agentTone}
+- Keep responses SHORT (1-2 sentences maximum unless asked for details)
+
+OPENING LINE (use this exact wording when the call starts):
+"${agentOpening}"
+
+Stay in character as ${agentName} at all times. Focus on ${agentGoal}.`;
+
+    console.log(`🤖 Setting up AI with instructions for: ${agentName}`);
+    
     jsonSend(session.modelConn, {
       type: "session.update",
       session: {
@@ -179,17 +196,31 @@ function tryConnectModel() {
         input_audio_transcription: { model: "whisper-1" },
         input_audio_format: "g711_ulaw",
         output_audio_format: "g711_ulaw",
-        instructions: `You are ${agentName}. Your goal is to ${agentGoal}. Tone: ${agentTone}. Keep your responses short (under 2 sentences).`,
+        instructions: systemInstructions,
         ...config,
       },
     });
 
-    // Send initial greeting
+    // Send initial greeting with explicit text content
+    jsonSend(session.modelConn, {
+      type: "conversation.item.create",
+      item: {
+        type: "message",
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: "Start the conversation by introducing yourself using your exact opening line."
+          }
+        ]
+      }
+    });
+
+    // Trigger response generation
     jsonSend(session.modelConn, {
       type: "response.create",
       response: {
         modalities: ["text", "audio"],
-        instructions: `Please say exactly the following sentence: ${agentOpening}`,
       },
     });
   });

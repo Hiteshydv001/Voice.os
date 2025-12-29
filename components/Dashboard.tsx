@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Phone, Users, CheckCircle, TrendingUp, Activity, PhoneOutgoing, X, Loader2, AlertTriangle, Coins, Plus } from 'lucide-react';
 import { Agent, ActivityLog } from '../types';
@@ -7,23 +7,13 @@ import { makeOutboundCall } from '../services/twilioService';
 import { useAuth } from '../contexts/AuthContext';
 import { deductCredits } from '../services/userService';
 import SubscriptionModal from './SubscriptionModal';
+import { subscribeToWeeklyTraffic, DailyTrafficData } from '../services/trafficAnalyticsService';
 
 interface DashboardProps {
   agents: Agent[];
   logs: ActivityLog[];
   onAddLog: (log: ActivityLog) => void;
 }
-
-// Placeholder data for the chart (Visualization only)
-const chartData = [
-  { name: 'MON', calls: 20, conversions: 5 },
-  { name: 'TUE', calls: 32, conversions: 8 },
-  { name: 'WED', calls: 15, conversions: 2 },
-  { name: 'THU', calls: 45, conversions: 12 },
-  { name: 'FRI', calls: 60, conversions: 20 },
-  { name: 'SAT', calls: 10, conversions: 1 },
-  { name: 'SUN', calls: 5, conversions: 0 },
-];
 
 const StatCard = ({ title, value, change, icon: Icon, colorClass, action }: any) => (
   <div className="bg-white p-6 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden">
@@ -64,7 +54,34 @@ const Dashboard: React.FC<DashboardProps> = ({ agents = [], logs = [], onAddLog 
   const [callStatus, setCallStatus] = useState<'idle' | 'connecting' | 'calling' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
 
+  // Real-time Traffic Analytics State
+  const [chartData, setChartData] = useState<DailyTrafficData[]>([
+    { name: 'MON', calls: 0, conversions: 0, date: '' },
+    { name: 'TUE', calls: 0, conversions: 0, date: '' },
+    { name: 'WED', calls: 0, conversions: 0, date: '' },
+    { name: 'THU', calls: 0, conversions: 0, date: '' },
+    { name: 'FRI', calls: 0, conversions: 0, date: '' },
+    { name: 'SAT', calls: 0, conversions: 0, date: '' },
+    { name: 'SUN', calls: 0, conversions: 0, date: '' },
+  ]);
+
   const CREDIT_COST_PER_CALL = 5;
+
+  // Subscribe to real-time traffic analytics
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+
+    console.log('📊 Setting up real-time traffic analytics subscription');
+    const unsubscribe = subscribeToWeeklyTraffic(currentUser.uid, (data) => {
+      console.log('📊 Traffic data updated:', data);
+      setChartData(data);
+    });
+
+    return () => {
+      console.log('📊 Cleaning up traffic analytics subscription');
+      unsubscribe();
+    };
+  }, [currentUser?.uid]);
 
   const handleCall = async () => {
     if (!dialerNumber || !selectedAgentId || !currentUser) return;
@@ -99,6 +116,12 @@ const Dashboard: React.FC<DashboardProps> = ({ agents = [], logs = [], onAddLog 
         await refreshProfile(); // Refresh UI
 
         setCallStatus('success');
+        
+        // Track call in real-time traffic analytics
+        const isConversion = false; // You can set this based on call outcome
+        await import('../services/trafficAnalyticsService').then(module => 
+          module.trackCall(currentUser.uid, isConversion)
+        );
         
         // Add to real logs
         const newLog: ActivityLog = {

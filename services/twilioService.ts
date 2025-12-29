@@ -38,18 +38,24 @@ export const makeOutboundCall = async (to: string, agent: Agent) => {
     const from = numbers[0].phoneNumber;
     
     // Make call via backend with agent configuration
+    const agentConfig = {
+      agentName: agent.name,
+      agentScript: {
+        opening: replaceAgentNameInScript(agent.script.opening, agent.name),
+        goal: agent.goal,
+        tone: agent.tone
+      }
+    };
+    
+    console.log('📞 Making call with config:', agentConfig);
+    
     const callResponse = await fetch(`${BACKEND_URL}/api/twilio/call`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
         to, 
         from,
-        agentName: agent.name,
-        agentScript: {
-          opening: replaceAgentNameInScript(agent.script.opening, agent.name),
-          goal: agent.goal,
-          tone: agent.tone
-        }
+        ...agentConfig
       }),
     });
 

@@ -106,16 +106,31 @@ app.get("/twiml", (req, res) => {
     
     // Get callId from query params if present
     const callId = req.query.callId as string;
-    console.log(`📞 TwiML request received. CallId: ${callId}`);
+    console.log(`📞 TwiML request received (GET). CallId: ${callId}`);
+    
     if (callId) {
+      // Store callId in a custom parameter that will be sent with Stream start event
       wsUrl.searchParams.set('callId', callId);
       console.log(`🔗 WebSocket URL with callId:`, wsUrl.toString());
     } else {
       console.warn(`⚠️ No callId in TwiML request query params`);
     }
 
-    const twimlContent = twimlTemplate.replace("{{WS_URL}}", wsUrl.toString());
-    res.type("text/xml").send(twimlContent);
+    // Build TwiML with Stream parameters
+    const twimlWithParams = callId 
+      ? `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say>Connected</Say>
+  <Connect>
+    <Stream url="${wsUrl.toString()}">
+      <Parameter name="callId" value="${callId}" />
+    </Stream>
+  </Connect>
+  <Say>Disconnected</Say>
+</Response>`
+      : twimlTemplate.replace("{{WS_URL}}", wsUrl.toString());
+
+    res.type("text/xml").send(twimlWithParams);
   } catch (error) {
     console.error("Error generating TwiML:", error);
     res.status(500).send("Error generating TwiML");
@@ -637,16 +652,37 @@ wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
       if (match) callId = match[1];
     }
     
-    console.log(`🔌 WebSocket connected. CallId: ${callId}`);
+    console.log(`🔌 WebSocket connected. CallId from URL: ${callId}`);
     
-    const agentConfig = callId ? pendingCallConfigs.get(callId) : undefined;
+    // Try to get agent config from callId
+    let agentConfig = callId ? pendingCallConfigs.get(callId) : undefined;
     
     if (agentConfig) {
-      console.log(`✅ Retrieved agent config for callId ${callId}:`, JSON.stringify(agentConfig));
-      // Clean up after retrieving
+      console.log(`✅ Retrieved agent config from URL callId ${callId}:`, JSON.stringify(agentConfig));
       if (callId) pendingCallConfigs.delete(callId);
     } else {
-      console.warn(`⚠️ No agent config found for callId ${callId}. Using defaults.`);
+      console.warn(`⚠️ No agent config found for URL callId ${callId}. Will check Stream start event parameters.`);
+      
+      // Listen for 'start' event to get callId from Stream parameters
+      ws.once('message', (data) => {
+        try {
+          const msg = JSON.parse(data.toString());
+          if (msg.event === 'start' && msg.start?.customParameters?.callId) {
+            const streamCallId = msg.start.customParameters.callId;
+            console.log(`📦 Received callId from Stream parameters: ${streamCallId}`);
+            agentConfig = pendingCallConfigs.get(streamCallId);
+            if (agentConfig) {
+              console.log(`✅ Retrieved agent config from Stream callId ${streamCallId}:`, JSON.stringify(agentConfig));
+              pendingCallConfigs.delete(streamCallId);
+              // Update session with the correct config
+              handleCallConnection(currentCall!, OPENAI_API_KEY, agentConfig);
+              return;
+            }
+          }
+        } catch (e) {
+          console.error('Error parsing start message:', e);
+        }
+      });
     }
     
     handleCallConnection(currentCall, OPENAI_API_KEY, agentConfig);

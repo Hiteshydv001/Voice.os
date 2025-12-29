@@ -69,9 +69,13 @@ const Dashboard: React.FC<DashboardProps> = ({ agents = [], logs = [], onAddLog 
 
   // Subscribe to real-time traffic analytics
   useEffect(() => {
-    if (!currentUser?.uid) return;
+    if (!currentUser?.uid) {
+      console.log('⚠️ No currentUser.uid available for traffic analytics');
+      return;
+    }
 
-    console.log('📊 Setting up real-time traffic analytics subscription');
+    console.log('📊 Setting up real-time traffic analytics subscription for user:', currentUser.uid);
+    
     const unsubscribe = subscribeToWeeklyTraffic(currentUser.uid, (data) => {
       console.log('📊 Traffic data updated:', data);
       setChartData(data);

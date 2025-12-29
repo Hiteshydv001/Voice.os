@@ -189,10 +189,30 @@ export const subscribeToWeeklyTraffic = (
   }
 
   const weekStart = getWeekStart();
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
   const weekId = formatDate(weekStart);
+  
   console.log(`📊 Subscribing to traffic analytics: users/${userId}/trafficAnalytics/${weekId}`);
   
   const docRef = getWeekDocRef(userId);
+  
+  // Try to initialize the document first if it doesn't exist
+  getDoc(docRef).then((docSnap) => {
+    if (!docSnap.exists()) {
+      console.log('📊 Initializing new week document...');
+      const newWeekData: WeeklyTrafficData = {
+        userId,
+        weekStart: weekStart.toISOString(),
+        weekEnd: weekEnd.toISOString(),
+        days: initializeWeeklyData(),
+        lastUpdated: new Date().toISOString()
+      };
+      return setDoc(docRef, newWeekData);
+    }
+  }).catch((error) => {
+    console.warn('📊 Could not initialize week document:', error);
+  });
   
   return onSnapshot(docRef, (snapshot) => {
     console.log(`📊 Snapshot received. Exists: ${snapshot.exists()}`);

@@ -86,8 +86,13 @@ const Dashboard: React.FC<DashboardProps> = ({ agents = [], logs = [], onAddLog 
     try {
         setCallStatus('calling');
         
+        const callStartTime = Date.now();
+        const callStartTimeISO = new Date().toISOString();
+        
         // Call the real Twilio Service
         await makeOutboundCall(dialerNumber, agent.name);
+        
+        const callDuration = Math.floor((Date.now() - callStartTime) / 1000);
         
         // Deduct Credits
         await deductCredits(currentUser.uid, CREDIT_COST_PER_CALL);
@@ -104,6 +109,29 @@ const Dashboard: React.FC<DashboardProps> = ({ agents = [], logs = [], onAddLog 
           agentName: agent.name
         };
         onAddLog(newLog);
+
+        // Save to Call History
+        const callHistoryRecord: import('../types').CallHistoryRecord = {
+          id: `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          userId: currentUser.uid,
+          agentId: agent.id,
+          agentName: agent.name,
+          leadPhone: dialerNumber,
+          callType: 'Manual',
+          status: 'Completed',
+          duration: callDuration,
+          timestamp: new Date().toISOString(),
+          startTime: callStartTimeISO,
+          endTime: new Date().toISOString(),
+          script: agent.script,
+          aiModel: 'gemini-flash-latest',
+          sentiment: 'Neutral',
+          outcome: 'Manual call completed',
+          notes: `Quick dial call to ${dialerNumber}`
+        };
+        await import('../services/storageService').then(module => 
+          module.storage.saveCallHistory(currentUser.uid, callHistoryRecord)
+        );
 
         // Reset after success
         setTimeout(() => {

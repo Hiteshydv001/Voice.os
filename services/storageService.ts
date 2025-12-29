@@ -1,4 +1,4 @@
-import { Agent, Lead, Campaign, ActivityLog } from '../types';
+import { Agent, Lead, Campaign, ActivityLog, CallHistoryRecord } from '../types';
 import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -323,6 +323,52 @@ export const storage = {
       await syncToFirestore(userId, 'savedAudio', audioForFirestore);
     } catch (error) {
       console.error('Error saving audio files:', error);
+    }
+  },
+
+  // Call History
+  saveCallHistory: async (userId: string, call: CallHistoryRecord) => {
+    if (!userId) return;
+    
+    try {
+      // Save to Firestore top-level collection
+      const callDocRef = doc(collection(db, 'call_history'));
+      await setDoc(callDocRef, {
+        ...call,
+        id: callDocRef.id,
+        userId,
+        timestamp: call.timestamp || new Date().toISOString(),
+        createdAt: new Date().toISOString()
+      });
+      console.log('Call history saved:', callDocRef.id);
+    } catch (error) {
+      console.error('Error saving call history:', error);
+    }
+  },
+
+  getCallHistory: async (userId: string): Promise<CallHistoryRecord[]> => {
+    if (!userId) return [];
+    
+    try {
+      const callsQuery = query(
+        collection(db, 'call_history'),
+        where('userId', '==', userId)
+      );
+      const snapshot = await getDocs(callsQuery);
+      const calls = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as CallHistoryRecord[];
+      
+      // Sort by timestamp descending
+      calls.sort((a, b) => 
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+      
+      return calls;
+    } catch (error) {
+      console.error('Error loading call history:', error);
+      return [];
     }
   },
 };

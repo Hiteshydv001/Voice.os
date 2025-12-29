@@ -72,15 +72,23 @@ const UserActivity: React.FC = () => {
       );
       const logsSnapshot = await getDocs(logsQuery);
       const recentActivities = logsSnapshot.docs
-        .map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as ActivityLog[];
+        .map(doc => {
+          const data = doc.data();
+          console.log('Activity log data:', data); // Debug log
+          return {
+            id: doc.id,
+            action: data.action || 'Unknown Action',
+            timestamp: data.timestamp || new Date().toISOString(),
+            details: data.details || 'No details available'
+          };
+        }) as ActivityLog[];
       
       // Sort by timestamp on client side and take last 20
-      recentActivities.sort((a, b) => 
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      );
+      recentActivities.sort((a, b) => {
+        const dateA = new Date(a.timestamp).getTime();
+        const dateB = new Date(b.timestamp).getTime();
+        return dateB - dateA;
+      });
       const limitedActivities = recentActivities.slice(0, 20);
 
       setStats({
@@ -98,17 +106,26 @@ const UserActivity: React.FC = () => {
   };
 
   const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
+    if (!timestamp) return 'Unknown';
+    
+    try {
+      const date = new Date(timestamp);
+      if (isNaN(date.getTime())) return 'Invalid date';
+      
+      const now = new Date();
+      const diff = now.getTime() - date.getTime();
+      const minutes = Math.floor(diff / 60000);
+      const hours = Math.floor(diff / 3600000);
+      const days = Math.floor(diff / 86400000);
 
-    if (minutes < 1) return 'Just now';
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    return `${days}d ago`;
+      if (minutes < 1) return 'Just now';
+      if (minutes < 60) return `${minutes}m ago`;
+      if (hours < 24) return `${hours}h ago`;
+      return `${days}d ago`;
+    } catch (error) {
+      console.error('Error formatting timestamp:', error);
+      return 'Unknown';
+    }
   };
 
   if (loading) {

@@ -38,6 +38,41 @@ export interface CampaignCallResult {
   sentiment?: 'Positive' | 'Neutral' | 'Negative';
 }
 
+export interface CallHistoryRecord {
+  id: string;
+  userId: string;
+  callSid?: string; // Twilio Call SID
+  agentId: string;
+  agentName: string;
+  leadId?: string;
+  leadName?: string;
+  leadPhone: string;
+  callType: 'Campaign' | 'Manual';
+  campaignId?: string;
+  campaignName?: string;
+  status: 'Completed' | 'Failed' | 'No Answer' | 'Busy' | 'Voicemail' | 'In Progress';
+  duration: number; // in seconds
+  timestamp: string;
+  startTime: string;
+  endTime?: string;
+  recordingUrl?: string;
+  transcript?: Array<{
+    role: 'agent' | 'customer';
+    text: string;
+    timestamp: string;
+  }>;
+  script: {
+    opening: string;
+    closing: string;
+    objectionHandling: string;
+  };
+  aiModel?: string;
+  sentiment?: 'Positive' | 'Neutral' | 'Negative';
+  outcome?: string;
+  notes?: string;
+  metadata?: Record<string, any>;
+}
+
 export interface Campaign {
   id: string;
   name: string;

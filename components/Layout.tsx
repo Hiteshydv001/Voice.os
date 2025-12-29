@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LayoutDashboard, Users, PhoneOutgoing, Bot, Settings, LogOut, Menu, Terminal, Mic, Network } from 'lucide-react';
+import { LayoutDashboard, Users, PhoneOutgoing, Bot, Settings, LogOut, Menu, Terminal, Mic, Network, Phone } from 'lucide-react';
 
 const Layout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
@@ -24,6 +24,7 @@ const Layout: React.FC = () => {
     { icon: Network, label: 'FLOW BUILDER', path: '/app/visual-builder' },
     { icon: Users, label: 'LEADS', path: '/app/leads' },
     { icon: PhoneOutgoing, label: 'CAMPAIGNS', path: '/app/campaigns' },
+    { icon: Phone, label: 'CALL HISTORY', path: '/app/call-history', featured: true },
   ];
 
   return (

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../services/firebase';
-import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Phone, Clock, FileText, PlayCircle, Download, Filter, Search, Calendar, TrendingUp, AlertCircle, CheckCircle, XCircle, Terminal } from 'lucide-react';
 import { CallHistoryRecord } from '../types';
-import { fetchRecordingUrl, downloadRecording } from '../services/recordingService';
+import { getRecordingUrl, downloadRecording } from '../services/recordingService';
 
 const CallHistory: React.FC = () => {
   const { currentUser } = useAuth();
@@ -49,60 +49,23 @@ const CallHistory: React.FC = () => {
     }
   };
 
-  // Fetch recording URL for a call if not already available
-  const loadRecordingUrl = async (call: CallHistoryRecord) => {
-    if (call.recordingUrl || !call.callSid) return;
-
-    try {
-      const url = await fetchRecordingUrl(call.callSid);
-      if (url) {
-        // Update the call in state
-        setCalls(prevCalls => 
-          prevCalls.map(c => 
-            c.id === call.id ? { ...c, recordingUrl: url } : c
-          )
-        );
-        
-        // Update in Firestore
-        if (currentUser) {
-          const callRef = doc(db, 'call_history', call.id);
-          await updateDoc(callRef, { recordingUrl: url });
-        }
-      }
-    } catch (error) {
-      console.error('Error loading recording URL:', error);
+  const handlePlayRecording = (call: CallHistoryRecord) => {
+    if (call.callSid) {
+      const recordingUrl = getRecordingUrl(call.callSid);
+      window.open(recordingUrl, '_blank');
+    } else {
+      alert('Recording not available for this call.');
     }
   };
 
-  const handlePlayRecording = async (call: CallHistoryRecord) => {
-    if (!call.recordingUrl && call.callSid) {
-      // Try to fetch the recording URL first
-      await loadRecordingUrl(call);
-    }
-    
-    if (call.recordingUrl) {
-      window.open(call.recordingUrl, '_blank');
+  const handleDownloadRecording = (call: CallHistoryRecord) => {
+    if (call.callSid) {
+      downloadRecording(
+        call.callSid,
+        `recording_${call.agentName}_${call.leadPhone}_${new Date(call.timestamp).toISOString().split('T')[0]}.mp3`
+      );
     } else {
-      alert('Recording not available yet. Please try again in a few moments.');
-    }
-  };
-
-  const handleDownloadRecording = async (call: CallHistoryRecord) => {
-    if (!call.recordingUrl && call.callSid) {
-      await loadRecordingUrl(call);
-    }
-
-    if (call.recordingUrl) {
-      try {
-        await downloadRecording(
-          call.recordingUrl, 
-          `recording_${call.agentName}_${call.leadPhone}_${call.timestamp}.mp3`
-        );
-      } catch (error) {
-        alert('Failed to download recording. Please try again.');
-      }
-    } else {
-      alert('Recording not available yet. Please try again in a few moments.');
+      alert('Recording not available for this call.');
     }
   };
 

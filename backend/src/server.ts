@@ -92,7 +92,8 @@ app.get("/public-url", (req, res) => {
   res.json({ publicUrl: PUBLIC_URL });
 });
 
-app.post("/twiml", (req, res) => {
+// TwiML endpoint - Twilio calls this with GET request (not POST)
+app.get("/twiml", (req, res) => {
   try {
     if (!PUBLIC_URL) {
       console.error("PUBLIC_URL is not set");
@@ -106,6 +107,36 @@ app.post("/twiml", (req, res) => {
     // Get callId from query params if present
     const callId = req.query.callId as string;
     console.log(`📞 TwiML request received. CallId: ${callId}`);
+    if (callId) {
+      wsUrl.searchParams.set('callId', callId);
+      console.log(`🔗 WebSocket URL with callId:`, wsUrl.toString());
+    } else {
+      console.warn(`⚠️ No callId in TwiML request query params`);
+    }
+
+    const twimlContent = twimlTemplate.replace("{{WS_URL}}", wsUrl.toString());
+    res.type("text/xml").send(twimlContent);
+  } catch (error) {
+    console.error("Error generating TwiML:", error);
+    res.status(500).send("Error generating TwiML");
+  }
+});
+
+// Also support POST for backwards compatibility
+app.post("/twiml", (req, res) => {
+  try {
+    if (!PUBLIC_URL) {
+      console.error("PUBLIC_URL is not set");
+      res.status(500).send("PUBLIC_URL environment variable is not configured");
+      return;
+    }
+    const wsUrl = new URL(PUBLIC_URL);
+    wsUrl.protocol = "wss:";
+    wsUrl.pathname = `/call`;
+    
+    // Get callId from query params if present
+    const callId = req.query.callId as string;
+    console.log(`📞 TwiML request received (POST). CallId: ${callId}`);
     if (callId) {
       wsUrl.searchParams.set('callId', callId);
       console.log(`🔗 WebSocket URL with callId:`, wsUrl.toString());
@@ -238,7 +269,7 @@ app.post("/api/twilio/recording-callback", async (req: Request, res: Response) =
   res.sendStatus(200);
 });
 
-// Get recording URL for a call
+// Get recording audio file - proxy through backend to avoid auth issues
 app.get("/api/twilio/recording/:callSid", async (req: Request, res: Response) => {
   const { callSid } = req.params;
   
@@ -251,18 +282,31 @@ app.get("/api/twilio/recording/:callSid", async (req: Request, res: Response) =>
     const client = new Twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
     const recordings = await client.recordings.list({ callSid, limit: 1 });
     
-    if (recordings.length > 0) {
-      const recording = recordings[0];
-      // Construct full URL for recording download
-      const recordingUrl = `https://api.twilio.com${recording.uri.replace('.json', '.mp3')}`;
-      res.json({ 
-        recordingUrl,
-        recordingSid: recording.sid,
-        duration: recording.duration 
-      });
-    } else {
+    if (recordings.length === 0) {
       res.status(404).json({ error: "No recording found for this call" });
+      return;
     }
+    
+    const recording = recordings[0];
+    const recordingUrl = `https://api.twilio.com${recording.uri.replace('.json', '.mp3')}`;
+    
+    // Fetch the audio file from Twilio with authentication
+    const authString = Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString('base64');
+    const audioResponse = await fetch(recordingUrl, {
+      headers: {
+        'Authorization': `Basic ${authString}`
+      }
+    });
+    
+    if (!audioResponse.ok) {
+      throw new Error('Failed to fetch recording from Twilio');
+    }
+    
+    // Stream the audio back to client
+    const audioBuffer = await audioResponse.arrayBuffer();
+    res.set('Content-Type', 'audio/mpeg');
+    res.set('Content-Disposition', `attachment; filename="recording_${callSid}.mp3"`);
+    res.send(Buffer.from(audioBuffer));
   } catch (error: any) {
     console.error("Error fetching recording:", error);
     res.status(500).json({ error: error.message });

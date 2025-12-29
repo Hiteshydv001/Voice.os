@@ -7,6 +7,7 @@ import LandingPage from './components/LandingPage';
 import Login from './components/Auth/Login';
 import SignUp from './components/Auth/SignUp';
 import Dashboard from './components/Dashboard';
+import UserActivity from './components/UserActivity';
 import AgentBuilder from './components/AgentBuilder';
 import { AgentBuilderPage } from './components/AgentBuilder/AgentBuilderPage';
 import LeadsManager from './components/LeadsManager';
@@ -369,6 +370,7 @@ const AppContent: React.FC = () => {
         }>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard agents={agents} logs={logs} onAddLog={handleAddLog} />} />
+          <Route path="activity" element={<UserActivity />} />
           <Route 
             path="agents" 
             element={

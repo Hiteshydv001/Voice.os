@@ -81,10 +81,19 @@ const Layout: React.FC = () => {
         </nav>
 
         <div className="absolute bottom-0 w-full p-4 border-t-2 border-white/20 bg-stone-900">
-          <button className="flex items-center w-full px-4 py-3 text-stone-400 hover:text-white hover:bg-stone-800 border-2 border-transparent hover:border-white transition-all">
+          <NavLink
+            to="/app/activity"
+            onClick={() => setSidebarOpen(false)}
+            className={({ isActive }) => `
+              flex items-center w-full px-4 py-3 border-2 transition-all
+              ${isActive 
+                ? 'bg-orange-600 text-white border-white shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]' 
+                : 'text-stone-400 hover:text-white hover:bg-stone-800 border-transparent hover:border-white'}
+            `}
+          >
             <Settings className="h-5 w-5 mr-3" />
             <span className="font-bold">SYSTEM</span>
-          </button>
+          </NavLink>
           <button 
             onClick={handleLogout}
             className="flex items-center w-full px-4 py-3 text-stone-400 hover:text-white hover:bg-stone-800 border-2 border-transparent hover:border-white transition-all mt-2"

@@ -239,7 +239,7 @@ app.post("/api/gemini/generate", async (req: Request, res: Response) => {
   }
 
   try {
-    const finalModel = model || 'gemini-1.5-flash';
+    const finalModel = model || 'gemini-flash-latest';
     const finalTemp = temperature !== undefined ? temperature : 0.7;
     const textContent = systemPrompt ? `${systemPrompt}\n\nUser: ${prompt}` : prompt;
 

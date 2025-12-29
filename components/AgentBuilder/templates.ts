@@ -38,10 +38,10 @@ export const agentTemplates: AgentTemplate[] = [
           type: 'llm',
           position: { x: 500, y: 200 },
           data: {
-            label: 'Gemini 1.5 Flash',
+            label: 'Gemini Flash Latest',
             config: {
               provider: 'gemini',
-              model: 'gemini-1.5-flash',
+              model: 'gemini-flash-latest',
               temperature: 0.7,
               systemPrompt: 'You are a friendly voice assistant. Keep responses concise and helpful.',
             },

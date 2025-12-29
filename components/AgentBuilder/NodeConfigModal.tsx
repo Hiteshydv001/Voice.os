@@ -28,7 +28,7 @@ export function NodeConfigModal({
         case 'llm':
           setConfig({
             provider: 'gemini',
-            model: 'gemini-1.5-flash',
+            model: 'gemini-flash-latest',
             temperature: 0.7,
             systemPrompt: 'You are a helpful AI assistant.',
           });
@@ -79,7 +79,7 @@ export function NodeConfigModal({
                 value={config.provider || 'gemini'}
                 onChange={(e) => {
                   const newProvider = e.target.value;
-                  const newModel = newProvider === 'gemini' ? 'gemini-1.5-flash' : 'llama-3.3-70b-versatile';
+                  const newModel = newProvider === 'gemini' ? 'gemini-flash-latest' : 'llama-3.3-70b-versatile';
                   setConfig({ ...config, provider: newProvider, model: newModel });
                 }}
                 className="w-full px-3 py-2 border-2 border-black font-mono text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -100,8 +100,8 @@ export function NodeConfigModal({
               >
                 {config.provider === 'gemini' ? (
                   <>
-                    <option value="gemini-1.5-flash">Gemini 1.5 Flash (Free - 15 RPM)</option>
-                    <option value="gemini-1.5-pro">Gemini 1.5 Pro (Free - 2 RPM)</option>
+                    <option value="gemini-flash-latest">Gemini Flash Latest (Free - Auto-updates)</option>
+                    <option value="gemini-pro-latest">Gemini Pro Latest (Free - Auto-updates)</option>
                   </>
                 ) : (
                   <>

@@ -121,7 +121,7 @@ const Dashboard: React.FC<DashboardProps> = ({ agents = [], logs = [], onAddLog 
 
   const totalCalls = logs.length;
   // Simple calculation for demo purposes
-  const qualifiedLeads = logs.filter(l => l.status.includes('Qualified')).length; 
+  const qualifiedLeads = logs.filter(l => l.status?.includes('Qualified')).length; 
 
   return (
     <div className="space-y-8 font-mono">
@@ -326,13 +326,13 @@ const Dashboard: React.FC<DashboardProps> = ({ agents = [], logs = [], onAddLog 
                 logs.slice().reverse().map((log, _idx) => (
                 <div key={log.id} className="mb-3 pb-3 border-b border-stone-300 last:border-0">
                     <div className="flex items-center justify-between mb-1">
-                        <span className="font-bold text-black">{log.time}</span>
+                        <span className="font-bold text-black">{log.time || log.timestamp}</span>
                         <span className={`px-1 py-0.5 text-[10px] border border-black uppercase font-bold ${
-                           log.status.includes('Outbound') ? 'bg-blue-200 text-black' : 
+                           log.status?.includes('Outbound') ? 'bg-blue-200 text-black' : 
                            log.status === 'Qualified Lead' ? 'bg-green-200 text-black' : 
                            log.status === 'No Answer' ? 'bg-red-200 text-black' : 'bg-white text-black'
                         }`}>
-                            {log.status}
+                            {log.status || log.action || 'Unknown'}
                         </span>
                     </div>
                     <div className="flex items-center text-stone-600">

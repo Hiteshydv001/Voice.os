@@ -31,13 +31,13 @@ export interface VoiceProfile {
   id: string;
   name: string;
   voiceUuid?: string;
-  elevenLabsVoiceId?: string;
+  minimaxVoiceId?: string;
   audioUrl?: string;
   audioBase64?: string;
   createdAt: string;
   status: 'ready' | 'processing' | 'failed';
   type: 'uploaded' | 'recorded' | 'cloned';
-  provider?: 'elevenlabs' | 'resemble';
+  provider?: 'minimax' | 'resemble';
 }
 
 export interface SavedAudioFile {

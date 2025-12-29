@@ -287,7 +287,7 @@ export class AgentExecutor {
     this.log(`   📝 Text length: ${textInput.length} characters`);
 
     try {
-      const response = await fetch(`${backendUrl}/api/elevenlabs/tts`, {
+      const response = await fetch(`${backendUrl}/api/minimax/tts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

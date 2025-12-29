@@ -261,7 +261,7 @@ export function APIKeysModal({ isOpen, onClose }: APIKeysModalProps) {
                 </a>
               </div>
               <div className="flex items-center gap-2">
-                {platformKeys.elevenlabs && (
+                {platformKeys.minimax && (
                   <span className="text-xs bg-green-100 border border-green-500 px-2 py-1">
                     Platform Key Available
                   </span>
@@ -272,32 +272,32 @@ export function APIKeysModal({ isOpen, onClose }: APIKeysModalProps) {
             <label className="flex items-center gap-2 mb-3 cursor-pointer">
               <input
                 type="checkbox"
-                checked={keys.useOwnElevenlabs}
+                checked={keys.useOwnMinimax}
                 onChange={(e) =>
-                  setKeys({ ...keys, useOwnElevenlabs: e.target.checked })
+                  setKeys({ ...keys, useOwnMinimax: e.target.checked })
                 }
                 className="w-4 h-4"
               />
               <span className="text-sm font-bold">Use my own Minimax API key</span>
             </label>
 
-            {keys.useOwnElevenlabs && (
+            {keys.useOwnMinimax && (
               <div className="relative">
                 <input
-                  type={showKeys.elevenlabs ? 'text' : 'password'}
-                  value={keys.elevenlabsApiKey || ''}
+                  type={showKeys.minimax ? 'text' : 'password'}
+                  value={keys.minimaxApiKey || ''}
                   onChange={(e) =>
-                    setKeys({ ...keys, elevenlabsApiKey: e.target.value })
+                    setKeys({ ...keys, minimaxApiKey: e.target.value })
                   }
                   placeholder="Your Minimax API key"
                   className="w-full px-3 py-2 border-2 border-black font-mono text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 pr-20"
                 />
                 <button
                   type="button"
-                  onClick={() => toggleShowKey('elevenlabs')}
+                  onClick={() => toggleShowKey('minimax')}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-xs px-2 py-1 border border-black bg-white hover:bg-stone-50"
                 >
-                  {showKeys.elevenlabs ? 'Hide' : 'Show'}
+                  {showKeys.minimax ? 'Hide' : 'Show'}
                 </button>
               </div>
             )}

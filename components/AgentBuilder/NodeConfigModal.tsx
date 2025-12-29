@@ -41,8 +41,8 @@ export function NodeConfigModal({
           break;
         case 'tts':
           setConfig({
-            voice: '21m00Tcm4TlvDq8ikWAM', // Rachel
-            model: 'eleven_monolingual_v1',
+            voice: 'presenter_female',
+            model: 'speech-02-turbo',
           });
           break;
         case 'start':
@@ -191,20 +191,20 @@ export function NodeConfigModal({
                 Minimax Voice
               </label>
               <select
-                value={config.voice || '21m00Tcm4TlvDq8ikWAM'}
+                value={config.voice || 'presenter_female'}
                 onChange={(e) => setConfig({ ...config, voice: e.target.value })}
                 className="w-full px-3 py-2 border-2 border-black font-mono text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
-                <option value="21m00Tcm4TlvDq8ikWAM">Rachel (Female, American)</option>
-                <option value="pNInz6obpgDQGcFmaJgB">Adam (Male, American)</option>
-                <option value="AZnzlk1XvdvUeBnXmlld">Domi (Female, American)</option>
-                <option value="EXAVITQu4vr4xnSDxMaL">Bella (Female, American)</option>
-                <option value="ErXwobaYiN019PkySvjV">Antoni (Male, American)</option>
-                <option value="MF3mGyEYCl7XYWbV9V6O">Elli (Female, American)</option>
-                <option value="TxGEqnHWrfWFTfGW9XjX">Josh (Male, American)</option>
-                <option value="VR6AewLTigWG4xSOukaG">Arnold (Male, American)</option>
-                <option value="N2lVS1w4EtoT3dr4eOWO">Callum (Male, British)</option>
-                <option value="XB0fDUnXU5powFXDhCwa">Charlotte (Female, British)</option>
+                <option value="presenter_female">Presenter Female</option>
+                <option value="presenter_male">Presenter Male</option>
+                <option value="audiobook_female_1">Audiobook Female 1</option>
+                <option value="audiobook_female_2">Audiobook Female 2</option>
+                <option value="audiobook_male_1">Audiobook Male 1</option>
+                <option value="audiobook_male_2">Audiobook Male 2</option>
+                <option value="male-qn-qingse">Qingse (Male, Chinese)</option>
+                <option value="female-shaonv">Shaonv (Female, Chinese)</option>
+                <option value="male-qn-jingying">Jingying (Male, Chinese)</option>
+                <option value="English_Lucky_Robot">Lucky Robot (English)</option>
               </select>
             </div>
 
@@ -213,13 +213,12 @@ export function NodeConfigModal({
                 Model
               </label>
               <select
-                value={config.model || 'eleven_monolingual_v1'}
+                value={config.model || 'speech-02-turbo'}
                 onChange={(e) => setConfig({ ...config, model: e.target.value })}
                 className="w-full px-3 py-2 border-2 border-black font-mono text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
-                <option value="eleven_monolingual_v1">Eleven Monolingual v1</option>
-                <option value="eleven_multilingual_v2">Eleven Multilingual v2</option>
-                <option value="eleven_turbo_v2">Eleven Turbo v2 (Fastest)</option>
+                <option value="speech-02-turbo">Speech-02 Turbo</option>
+                <option value="speech-01">Speech-01</option>
               </select>
             </div>
           </div>

@@ -19,12 +19,12 @@ View your app in AI Studio: https://ai.studio/apps/drive/1I-MQLB4kTDFaHgV36fCh3K
 - **Built-in Testing**: Test agents in real-time simulator before deployment
 
 ### 2. **Voice Cloning & Synthesis**
-- **Multiple Voice Options**: Choose from ElevenLabs premium voice library
+- **Multiple Voice Options**: Choose from Minimax voice library
 - **Voice Recording**: Record custom voices directly in the browser
 - **File Upload**: Upload audio files for voice cloning
 - **Text-to-Speech Testing**: Preview voices with custom text
 - **Saved Audio Library**: Store and manage generated audio files
-- **Multiple TTS Models**: Support for various ElevenLabs models (Turbo v2.5, Multilingual, etc.)
+- **Multiple TTS Models**: Support for various Minimax models (Speech-02 Turbo, Speech-01, etc.)
 
 ### 3. **Lead Management**
 - **CSV Import**: Bulk import leads from CSV files
@@ -118,7 +118,7 @@ View your app in AI Studio: https://ai.studio/apps/drive/1I-MQLB4kTDFaHgV36fCh3K
 │   │   ├── agentExecutor.ts        # Agent execution logic
 │   │   ├── agentFlowService.ts     # Agent flow CRUD operations
 │   │   ├── apiKeyService.ts        # API key management
-│   │   ├── elevenLabsService.ts    # ElevenLabs integration
+│   │   ├── minimaxService.ts       # Minimax TTS integration
 │   │   ├── firebase.ts             # Firebase configuration
 │   │   ├── geminiService.ts        # Google Gemini integration
 │   │   ├── resembleService.ts      # Resemble AI integration
@@ -180,7 +180,7 @@ View your app in AI Studio: https://ai.studio/apps/drive/1I-MQLB4kTDFaHgV36fCh3K
 - **Twilio** - Voice calls & SMS
 - **OpenAI** - Realtime API for voice conversations
 - **Google Gemini** - AI script generation
-- **ElevenLabs** - Voice synthesis & cloning
+- **Minimax** - Voice synthesis & TTS
 - **Stripe** - Payment processing
 
 ### Deployment
@@ -229,7 +229,7 @@ Twilio Call → WebSocket → OpenAI Realtime API → Response → TTS → User
 2. Audio streams through WebSocket to backend
 3. Backend forwards to OpenAI Realtime API
 4. OpenAI processes voice input and generates response
-5. Response converted to speech via ElevenLabs
+5. Response converted to speech via Minimax
 6. Audio streamed back to caller in real-time
 
 ### 5. Authentication & Credits
@@ -251,7 +251,7 @@ Sign Up → Free Credits → Use Features → Upgrade → More Credits
 - **Twilio account**
 - **OpenAI API key**
 - **Google Gemini API key**
-- **ElevenLabs API key**
+- **Minimax API key**
 - **Stripe account** (for payments)
 
 ### Environment Variables
@@ -266,7 +266,7 @@ VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
 VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 VITE_FIREBASE_APP_ID=your_app_id
 VITE_STRIPE_PUBLIC_KEY=your_stripe_public_key
-VITE_ELEVENLABS_API_KEY=your_elevenlabs_key
+VITE_MINIMAX_API_KEY=your_minimax_key
 VITE_GEMINI_API_KEY=your_gemini_key
 ```
 
@@ -384,7 +384,7 @@ docker run -p 5173:5173 -p 8081:8081 \
 ### Voice Cloning
 - Upload audio samples (WAV, MP3)
 - Record directly in browser
-- Instant voice cloning with ElevenLabs
+- Instant voice cloning with Minimax
 - Preview before using in campaigns
 
 ### Real-Time Monitoring
@@ -468,7 +468,7 @@ For support, email support@yourcompany.com or open an issue in the repository.
 
 - OpenAI for Realtime API
 - Google for Gemini AI
-- ElevenLabs for voice synthesis
+- Minimax for voice synthesis
 - Twilio for telephony
 - Firebase for backend infrastructure
 - shadcn/ui for beautiful components

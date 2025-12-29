@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Mic, Upload, Volume2, Play, Pause, Download, RefreshCw, 
+  Mic, Upload, Volume2, Play, Pause, Download,
   Radio, Sparkles, AlertCircle, X, Check, Loader2, Terminal, Save, Trash2, Clock
 } from 'lucide-react';
-import elevenLabsService from '../services/elevenLabsService';
+import minimaxService from '../services/minimaxService';
 import { storage, SavedAudioFile } from '../services/storageService';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -12,15 +12,29 @@ interface Voice {
   name: string;
   category?: string;
   preview_url?: string;
+  language?: string;
+  gender?: string;
+  description?: string;
 }
+
+// Hardcoded Minimax voices to avoid API flooding
+const MINIMAX_VOICES: Voice[] = [
+  { voice_id: 'English_Graceful_Lady', name: 'Graceful Lady', language: 'en-US', gender: 'FEMALE', category: 'english', description: 'Graceful female voice' },
+  { voice_id: 'English_Insightful_Speaker', name: 'Insightful Speaker', language: 'en-US', gender: 'MALE', category: 'english', description: 'Insightful male voice' },
+  { voice_id: 'English_radiant_girl', name: 'Radiant Girl', language: 'en-US', gender: 'FEMALE', category: 'english', description: 'Radiant young female voice' },
+  { voice_id: 'English_Persuasive_Man', name: 'Persuasive Man', language: 'en-US', gender: 'MALE', category: 'english', description: 'Persuasive male voice' },
+  { voice_id: 'moss_audio_6dc281eb-713c-11f0-a447-9613c873494c', name: 'Moss Voice 1', language: 'en-US', gender: 'MALE', category: 'english', description: 'Professional voice' },
+  { voice_id: 'moss_audio_570551b1-735c-11f0-b236-0adeeecad052', name: 'Moss Voice 2', language: 'en-US', gender: 'FEMALE', category: 'english', description: 'Clear female voice' },
+  { voice_id: 'moss_audio_ad5baf92-735f-11f0-8263-fe5a2fe98ec8', name: 'Moss Voice 3', language: 'en-US', gender: 'MALE', category: 'english', description: 'Deep male voice' },
+  { voice_id: 'English_Lucky_Robot', name: 'Lucky Robot', language: 'en-US', gender: 'MALE', category: 'english', description: 'Robotic voice' },
+];
 
 const VoiceCloning: React.FC = () => {
   const { currentUser } = useAuth();
 
   // Voice Library State
-  const [voices, setVoices] = useState<Voice[]>([]);
-  const [selectedVoice, setSelectedVoice] = useState<string>('');
-  const [isLoadingVoices, setIsLoadingVoices] = useState(false);
+  const [voices] = useState<Voice[]>(MINIMAX_VOICES);
+  const [selectedVoice, setSelectedVoice] = useState<string>(MINIMAX_VOICES[0].voice_id);
 
   // Saved Audio Library
   const [savedAudioFiles, setSavedAudioFiles] = useState<SavedAudioFile[]>([]);
@@ -85,24 +99,6 @@ const VoiceCloning: React.FC = () => {
     setConfirmationAction(null);
   };
 
-  // Load Voices
-  const loadElevenVoices = async () => {
-    setIsLoadingVoices(true);
-    try {
-      const response = await elevenLabsService.getVoices();
-      if (response.success && response.voices) {
-        setVoices(response.voices);
-        if (response.voices.length > 0 && !selectedVoice) {
-          setSelectedVoice(response.voices[0].voice_id);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load voices:', error);
-    } finally {
-      setIsLoadingVoices(false);
-    }
-  };
-
   // Load Saved Audio
   const loadSavedAudio = async () => {
     if (!currentUser) return;
@@ -165,7 +161,6 @@ const VoiceCloning: React.FC = () => {
   };
 
   useEffect(() => {
-    loadElevenVoices();
     loadSavedAudio();
   }, [currentUser]);
 
@@ -229,7 +224,7 @@ const VoiceCloning: React.FC = () => {
 
     setIsGenerating(true);
     try {
-      const response = await elevenLabsService.textToSpeech({
+      const response = await minimaxService.textToSpeech({
         text: testText,
         voiceId: selectedVoice,
       });
@@ -345,14 +340,6 @@ const VoiceCloning: React.FC = () => {
               TTS Engine • Voice Library • Audio Processing
             </p>
           </div>
-          <button
-            onClick={loadElevenVoices}
-            disabled={isLoadingVoices}
-            className="flex items-center gap-2 px-4 py-3 bg-black text-white border-2 border-black font-bold uppercase hover:bg-white hover:text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all disabled:opacity-50"
-          >
-            <RefreshCw className={`w-4 h-4 ${isLoadingVoices ? 'animate-spin' : ''}`} />
-            Sync
-          </button>
         </div>
       </div>
 

@@ -63,8 +63,8 @@ const AgentBuilderContent: React.FC = () => {
         };
       case 'tts':
         return {
-          voice: '21m00Tcm4TlvDq8ikWAM', // Rachel
-          model: 'eleven_monolingual_v1',
+          voice: 'presenter_female',
+          model: 'speech-02-turbo',
         };
       case 'start':
         return {

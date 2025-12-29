@@ -52,7 +52,7 @@ export const textToSpeech = async (
   try {
     const voiceId = options.voiceId || 'presenter_female';
     
-    const response = await fetch(`${BACKEND_URL}/api/elevenlabs/tts`, {
+    const response = await fetch(`${BACKEND_URL}/api/minimax/tts`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -91,31 +91,6 @@ export const textToSpeech = async (
 };
 
 /**
- * Get list of available voices from backend
- */
-export const getVoices = async (): Promise<VoicesResponse> => {
-  try {
-    const response = await fetch(`${BACKEND_URL}/api/elevenlabs/voices`);
-
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return {
-      success: true,
-      voices: data.voices || [],
-    };
-  } catch (error) {
-    console.error('Failed to load voices:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
-  }
-};
-
-/**
  * Helper function to convert Blob URL to File
  */
 export const blobUrlToFile = async (blobUrl: string, filename: string): Promise<File> => {
@@ -126,7 +101,6 @@ export const blobUrlToFile = async (blobUrl: string, filename: string): Promise<
 
 export default {
   textToSpeech,
-  getVoices,
   blobUrlToFile,
 };
 

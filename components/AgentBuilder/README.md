@@ -22,7 +22,7 @@ A drag-and-drop visual agent builder for creating complex AI agent workflows wit
      - Audio Input: WebRTC, microphone, telephony, file
      - Audio Output: WebRTC, speaker, telephony, file
      - STT (Speech-to-Text): Deepgram, Whisper, Google, Azure
-     - TTS (Text-to-Speech): ElevenLabs, Deepgram, OpenAI, Google, Azure
+     - TTS (Text-to-Speech): Minimax, Deepgram, OpenAI, Google, Azure
    
    - **Control Nodes**
      - Conditional: Branch based on conditions
@@ -105,10 +105,10 @@ Quick-start templates are available for common use cases:
 - **Punctuate**: Auto-add punctuation
 
 ### TTS Node (Text-to-Speech)
-- **Provider**: ElevenLabs (highest quality), Deepgram, OpenAI
+- **Provider**: Minimax (highest quality), Deepgram, OpenAI
 - **Voice ID**: Select from provider's voice library
-- **Stability**: Voice consistency (ElevenLabs)
-- **Similarity Boost**: Voice clone fidelity (ElevenLabs)
+- **Stability**: Voice consistency (Minimax)
+- **Similarity Boost**: Voice clone fidelity (Minimax)
 - **Streaming**: Enable for low-latency playback
 
 ### Tool Node
@@ -194,9 +194,9 @@ Quick-start templates are available for common use cases:
 }
 ```
 
-## Integration: ElevenLabs & Deepgram
+## Integration: Minimax & Deepgram
 
-### ElevenLabs (TTS)
+### Minimax (TTS)
 - **Use Case**: High-quality, natural voice synthesis
 - **Best For**: Customer-facing voice agents
 - **Features**: Voice cloning, emotion control, streaming
@@ -218,7 +218,7 @@ Speech-to-Text (Deepgram Flux)
   ↓
 LLM Agent (GPT-4)
   ↓
-Text-to-Speech (ElevenLabs)
+Text-to-Speech (Minimax)
   ↓
 Audio Output (WebRTC)
 ```

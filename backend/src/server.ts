@@ -330,11 +330,82 @@ const MINIMAX_VOICES = [
   { voice_id: 'English_Lucky_Robot', name: 'Lucky Robot', language: 'en-US', gender: 'MALE', category: 'english', description: 'Robotic voice' },
 ];
 
-app.get("/api/elevenlabs/voices", async (req: Request, res: Response) => {
-  // Return Minimax voices in compatible format
-  res.json({ voices: MINIMAX_VOICES });
+// Minimax TTS endpoint
+app.post("/api/minimax/tts", async (req: Request, res: Response) => {
+  if (!MINIMAX_API_KEY) {
+    res.status(503).json({ 
+      error: "Text-to-speech service unavailable: Minimax API key not configured" 
+    });
+    return;
+  }
+
+  const { text, voiceId } = req.body;
+  if (!text || !voiceId) {
+    res.status(400).json({ error: "Missing text or voiceId" });
+    return;
+  }
+
+  try {
+    // MiniMax TTS API - International endpoint (for users outside China)
+    const response = await fetch(
+      "https://api.minimaxi.chat/v1/t2a_v2",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${MINIMAX_API_KEY}`, // Bearer prefix is MANDATORY
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "speech-02-turbo", // Official MiniMax model
+          text,
+          voice_setting: {
+            voice_id: voiceId
+          },
+          audio_setting: {
+            audio_format: "wav",
+            sample_rate: 24000
+          }
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Minimax TTS API error: ${response.status} - ${errorText}`);
+      res.status(503).json({ 
+        error: `Text-to-speech service unavailable: Minimax API returned ${response.status}` 
+      });
+      return;
+    }
+
+    // MiniMax returns JSON with HEX encoded audio at data.audio (per official docs)
+    const data = await response.json();
+    
+    // Log for debugging
+    console.log("Minimax API response structure:", JSON.stringify(data, null, 2));
+    
+    // Extract HEX audio from official response format: data.audio
+    if (data.data && data.data.audio) {
+      // Decode from HEX, not base64 (default output_format is 'hex')
+      const audioBuffer = Buffer.from(data.data.audio, 'hex');
+      res.setHeader("Content-Type", "audio/wav");
+      res.send(audioBuffer);
+    } else {
+      console.error("Minimax response missing audio data. Full response:", JSON.stringify(data));
+      res.status(503).json({ 
+        error: 'No audio data in Minimax response',
+        debug: data 
+      });
+    }
+  } catch (error: any) {
+    console.error("Minimax TTS error:", error);
+    res.status(503).json({ 
+      error: "Text-to-speech service unavailable: " + error.message 
+    });
+  }
 });
 
+// Backward compatibility: Keep old elevenlabs endpoint pointing to minimax
 app.post("/api/elevenlabs/tts", async (req: Request, res: Response) => {
   if (!MINIMAX_API_KEY) {
     res.status(503).json({ 
@@ -409,14 +480,14 @@ app.post("/api/elevenlabs/tts", async (req: Request, res: Response) => {
   }
 });
 
+// ============= WebSocket Connection Handler =============
 let currentCall: WebSocket | null = null;
 let currentLogs: WebSocket | null = null;
 
 wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
-  const url = new URL(req.url || "", `http://${req.headers.host}`);
-  const pathname = url.pathname;
-
-  if (pathname === "/call" || pathname === "/voice/openai/stream") {
+  const pathname = new URL(req.url || "/", `http://${req.headers.host}`).pathname;
+  
+  if (pathname === "/call") {
     if (currentCall) currentCall.close();
     currentCall = ws;
     handleCallConnection(currentCall, OPENAI_API_KEY);

@@ -79,7 +79,7 @@ export type AgentNodeType =
   | 'end'
   | 'llm'      // Gemini or Groq
   | 'stt'      // Deepgram
-  | 'tts';     // ElevenLabs
+  | 'tts';     // Minimax
 
 export interface BaseNodeConfig {
   label?: string;
@@ -100,10 +100,10 @@ export interface STTNodeConfig extends BaseNodeConfig {
   language?: string;
 }
 
-// TTS: ElevenLabs only
+// TTS: Minimax only
 export interface TTSNodeConfig extends BaseNodeConfig {
-  voice: string; // rachel, adam, etc
-  model?: string; // eleven_monolingual_v1, etc
+  voice: string; // presenter_female, presenter_male, etc
+  model?: string; // speech-02-turbo, speech-01, etc
 }
 
 export interface StartNodeConfig extends BaseNodeConfig {

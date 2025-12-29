@@ -14,9 +14,9 @@ export interface APIKeys {
   deepgramApiKey?: string;
   useOwnDeepgram: boolean;
   
-  // ElevenLabs
-  elevenlabsApiKey?: string;
-  useOwnElevenlabs: boolean;
+  // Minimax
+  minimaxApiKey?: string;
+  useOwnMinimax: boolean;
 }
 
 const API_KEYS_STORAGE_KEY = 'voice-agent-api-keys';
@@ -26,7 +26,7 @@ const PLATFORM_KEYS = {
   gemini: import.meta.env.VITE_GEMINI_API_KEY || '',
   groq: import.meta.env.VITE_GROQ_API_KEY || '',
   deepgram: import.meta.env.VITE_DEEPGRAM_API_KEY || '',
-  elevenlabs: import.meta.env.VITE_ELEVENLABS_API_KEY || '',
+  minimax: import.meta.env.VITE_MINIMAX_API_KEY || '',
 };
 
 export class APIKeyService {
@@ -46,7 +46,7 @@ export class APIKeyService {
       useOwnGemini: false,
       useOwnGroq: false,
       useOwnDeepgram: false,
-      useOwnElevenlabs: false,
+      useOwnMinimax: false,
     };
   }
 
@@ -86,13 +86,13 @@ export class APIKeyService {
     return PLATFORM_KEYS.deepgram;
   }
 
-  // Get the active ElevenLabs API key
-  static getElevenlabsKey(): string {
+  // Get the active Minimax API key
+  static getMinimaxKey(): string {
     const keys = this.loadAPIKeys();
-    if (keys.useOwnElevenlabs && keys.elevenlabsApiKey) {
-      return keys.elevenlabsApiKey;
+    if (keys.useOwnMinimax && keys.minimaxApiKey) {
+      return keys.minimaxApiKey;
     }
-    return PLATFORM_KEYS.elevenlabs;
+    return PLATFORM_KEYS.minimax;
   }
 
   // Check if platform has keys configured
@@ -101,7 +101,7 @@ export class APIKeyService {
       gemini: !!PLATFORM_KEYS.gemini,
       groq: !!PLATFORM_KEYS.groq,
       deepgram: !!PLATFORM_KEYS.deepgram,
-      elevenlabs: !!PLATFORM_KEYS.elevenlabs,
+      minimax: !!PLATFORM_KEYS.minimax,
     };
   }
 
@@ -123,8 +123,8 @@ export class APIKeyService {
         return key.startsWith('gsk_') && key.length > 50;
       case 'deepgram':
         return key.length > 30; // Deepgram keys are long alphanumeric
-      case 'elevenlabs':
-        return key.length > 20; // ElevenLabs keys vary
+      case 'minimax':
+        return key.length > 20; // Minimax keys vary
       default:
         return key.length > 10; // Basic length check
     }

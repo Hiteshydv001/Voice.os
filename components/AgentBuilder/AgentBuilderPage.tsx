@@ -52,7 +52,7 @@ const AgentBuilderContent: React.FC = () => {
       case 'llm':
         return {
           provider: 'gemini',
-          model: 'gemini-2.0-flash',
+          model: 'gemini-1.5-flash',
           temperature: 0.7,
           systemPrompt: 'You are a helpful AI assistant.',
         };

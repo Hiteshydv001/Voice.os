@@ -1,5 +1,5 @@
 import { Agent, Lead, Campaign, ActivityLog } from '../types';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from './firebase';
 
 // Helper functions for blob/base64 conversion
@@ -130,52 +130,86 @@ export const storage = {
   getLeads: async (userId: string): Promise<Lead[]> => {
     if (!userId) return [];
     try {
-      const firestoreData = await loadFromFirestore<Lead[]>(userId, 'leads');
-      if (firestoreData) {
-        localStorage.setItem(getUserKey('leads', userId), JSON.stringify(firestoreData));
-        return firestoreData;
-      }
-      return JSON.parse(localStorage.getItem(getUserKey('leads', userId)) || '[]');
-    } catch { return []; }
+      // Load from Firestore top-level collection
+      const leadsQuery = query(collection(db, 'leads'), where('userId', '==', userId));
+      const snapshot = await getDocs(leadsQuery);
+      const leads = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lead));
+      console.log(`Loaded ${leads.length} leads from Firestore`);
+      return leads;
+    } catch (error) {
+      console.error('Error loading leads:', error);
+      return [];
+    }
   },
   saveLeads: async (userId: string, leads: Lead[]) => {
     if (!userId) return;
-    localStorage.setItem(getUserKey('leads', userId), JSON.stringify(leads));
-    await syncToFirestore(userId, 'leads', leads);
+    try {
+      // Save each lead as a separate document in top-level collection
+      for (const lead of leads) {
+        const leadRef = doc(db, 'leads', lead.id);
+        await setDoc(leadRef, { ...lead, userId });
+      }
+      console.log(`Saved ${leads.length} leads to Firestore`);
+    } catch (error) {
+      console.error('Error saving leads:', error);
+    }
   },
   
   getCampaigns: async (userId: string): Promise<Campaign[]> => {
     if (!userId) return [];
     try {
-      const firestoreData = await loadFromFirestore<Campaign[]>(userId, 'campaigns');
-      if (firestoreData) {
-        localStorage.setItem(getUserKey('campaigns', userId), JSON.stringify(firestoreData));
-        return firestoreData;
-      }
-      return JSON.parse(localStorage.getItem(getUserKey('campaigns', userId)) || '[]');
-    } catch { return []; }
+      // Load from Firestore top-level collection
+      const campaignsQuery = query(collection(db, 'campaigns'), where('userId', '==', userId));
+      const snapshot = await getDocs(campaignsQuery);
+      const campaigns = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Campaign));
+      console.log(`Loaded ${campaigns.length} campaigns from Firestore`);
+      return campaigns;
+    } catch (error) {
+      console.error('Error loading campaigns:', error);
+      return [];
+    }
   },
   saveCampaigns: async (userId: string, campaigns: Campaign[]) => {
     if (!userId) return;
-    localStorage.setItem(getUserKey('campaigns', userId), JSON.stringify(campaigns));
-    await syncToFirestore(userId, 'campaigns', campaigns);
+    try {
+      // Save each campaign as a separate document in top-level collection
+      for (const campaign of campaigns) {
+        const campaignRef = doc(db, 'campaigns', campaign.id);
+        await setDoc(campaignRef, { ...campaign, userId });
+      }
+      console.log(`Saved ${campaigns.length} campaigns to Firestore`);
+    } catch (error) {
+      console.error('Error saving campaigns:', error);
+    }
   },
 
   getLogs: async (userId: string): Promise<ActivityLog[]> => {
     if (!userId) return [];
     try {
-      const firestoreData = await loadFromFirestore<ActivityLog[]>(userId, 'logs');
-      if (firestoreData) {
-        localStorage.setItem(getUserKey('logs', userId), JSON.stringify(firestoreData));
-        return firestoreData;
-      }
-      return JSON.parse(localStorage.getItem(getUserKey('logs', userId)) || '[]');
-    } catch { return []; }
+      // Load from Firestore top-level collection
+      const logsQuery = query(collection(db, 'activity_logs'), where('userId', '==', userId));
+      const snapshot = await getDocs(logsQuery);
+      const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ActivityLog));
+      console.log(`Loaded ${logs.length} activity logs from Firestore`);
+      return logs;
+    } catch (error) {
+      console.error('Error loading activity logs:', error);
+      return [];
+    }
   },
   saveLogs: async (userId: string, logs: ActivityLog[]) => {
     if (!userId) return;
-    localStorage.setItem(getUserKey('logs', userId), JSON.stringify(logs));
-    await syncToFirestore(userId, 'logs', logs);
+    try {
+      // Save each log as a separate document in top-level collection
+      for (const log of logs) {
+        const logId = log.id || `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const logRef = doc(db, 'activity_logs', logId);
+        await setDoc(logRef, { ...log, id: logId, userId, timestamp: log.timestamp || new Date().toISOString() });
+      }
+      console.log(`Saved ${logs.length} activity logs to Firestore`);
+    } catch (error) {
+      console.error('Error saving activity logs:', error);
+    }
   },
 
   // Voice Profiles Storage

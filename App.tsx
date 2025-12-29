@@ -122,6 +122,14 @@ const AppContent: React.FC = () => {
     const updatedLeads = [...newLeads, ...leads];
     setLeads(updatedLeads);
     storage.saveLeads(currentUser.uid, updatedLeads);
+    
+    // Log activity
+    handleAddLog({
+      id: `log_${Date.now()}`,
+      action: 'Leads Imported',
+      timestamp: new Date().toISOString(),
+      details: `Imported ${newLeads.length} new leads`
+    });
   };
 
   const handleDeleteLead = (leadId: string) => {
@@ -133,8 +141,17 @@ const AppContent: React.FC = () => {
 
   const handleClearAllLeads = () => {
     if (!currentUser) return;
+    const count = leads.length;
     setLeads([]);
     storage.saveLeads(currentUser.uid, []);
+    
+    // Log activity
+    handleAddLog({
+      id: `log_${Date.now()}`,
+      action: 'Leads Cleared',
+      timestamp: new Date().toISOString(),
+      details: `Cleared all ${count} leads from database`
+    });
   };
 
   const handleDeleteCampaign = (campaignId: string) => {
@@ -201,6 +218,14 @@ const AppContent: React.FC = () => {
     const updatedCampaigns = [activeCampaign, ...campaigns];
     setCampaigns(updatedCampaigns);
     storage.saveCampaigns(currentUser.uid, updatedCampaigns);
+
+    // Log activity
+    handleAddLog({
+      id: `log_${Date.now()}`,
+      action: 'Campaign Started',
+      timestamp: new Date().toISOString(),
+      details: `Started campaign "${campaign.name}" with ${targetLeads.length} leads`
+    });
 
     alert(`Campaign Initialized. Starting calls for ${targetLeads.length} leads...`);
 

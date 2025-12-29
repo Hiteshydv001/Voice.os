@@ -53,10 +53,15 @@ export interface Campaign {
 
 export interface ActivityLog {
   id: number | string;
-  phone: string;
-  status: string;
-  time: string;
+  phone?: string;
+  status?: string;
+  time?: string;
   agentName?: string;
+  // User activity tracking fields
+  action?: string;
+  timestamp?: string;
+  details?: string;
+  userId?: string;
 }
 
 export interface StatCard {

@@ -1,5 +1,5 @@
 import { Agent, Lead, Campaign, ActivityLog } from '../types';
-import { doc, getDoc, setDoc, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from './firebase';
 
 // Helper functions for blob/base64 conversion
@@ -202,9 +202,9 @@ export const storage = {
     try {
       // Save each log as a separate document in top-level collection
       for (const log of logs) {
-        const logId = log.id || `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const logId = log.id?.toString() || `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         const logRef = doc(db, 'activity_logs', logId);
-        await setDoc(logRef, { ...log, id: logId, userId, timestamp: log.timestamp || new Date().toISOString() });
+        await setDoc(logRef, { ...log, id: logId, userId, timestamp: log.timestamp || log.time || new Date().toISOString() });
       }
       console.log(`Saved ${logs.length} activity logs to Firestore`);
     } catch (error) {

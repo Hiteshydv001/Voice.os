@@ -105,8 +105,12 @@ app.post("/twiml", (req, res) => {
     
     // Get callId from query params if present
     const callId = req.query.callId as string;
+    console.log(`📞 TwiML request received. CallId: ${callId}`);
     if (callId) {
       wsUrl.searchParams.set('callId', callId);
+      console.log(`🔗 WebSocket URL with callId:`, wsUrl.toString());
+    } else {
+      console.warn(`⚠️ No callId in TwiML request query params`);
     }
 
     const twimlContent = twimlTemplate.replace("{{WS_URL}}", wsUrl.toString());
@@ -187,15 +191,22 @@ app.post("/api/twilio/call", async (req: Request, res: Response) => {
     
     // Store agent configuration for this call
     if (agentName && agentScript) {
-      pendingCallConfigs.set(callId, {
+      const config = {
         name: agentName,
         opening: agentScript.opening,
         goal: agentScript.goal || "assist the customer",
         tone: agentScript.tone || "Professional and friendly"
-      });
+      };
+      pendingCallConfigs.set(callId, config);
+      console.log(`📦 Stored agent config for callId ${callId}:`, config);
       
       // Clean up after 5 minutes if not used
-      setTimeout(() => pendingCallConfigs.delete(callId), 5 * 60 * 1000);
+      setTimeout(() => {
+        pendingCallConfigs.delete(callId);
+        console.log(`🗑️ Cleaned up config for callId ${callId}`);
+      }, 5 * 60 * 1000);
+    } else {
+      console.warn(`⚠️ No agent config provided for call to ${to}`);
     }
     
     const call = await client.calls.create({
@@ -523,7 +534,15 @@ wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
     // Try to get agent config from query params or use default
     const url = new URL(req.url || "/", `http://${req.headers.host}`);
     const callId = url.searchParams.get('callId');
+    console.log(`🔌 WebSocket connected. CallId: ${callId}`);
+    
     const agentConfig = callId ? pendingCallConfigs.get(callId) : undefined;
+    
+    if (agentConfig) {
+      console.log(`✅ Retrieved agent config for callId ${callId}:`, agentConfig);
+    } else {
+      console.warn(`⚠️ No agent config found for callId ${callId}. Using defaults.`);
+    }
     
     // Clean up after retrieving
     if (callId) {

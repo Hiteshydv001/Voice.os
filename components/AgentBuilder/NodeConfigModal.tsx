@@ -96,10 +96,10 @@ export function NodeConfigModal({
               >
                 {config.provider === 'gemini' ? (
                   <>
-                    <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                    <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-                    <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-                    <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Experimental)</option>
+                    <option value="gemini-2.5-flash">Gemini 2.5 Flash (Recommended)</option>
+                    <option value="gemini-2.5-pro">Gemini 2.5 Pro (Most Capable)</option>
+                    <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite (Fastest)</option>
+                    <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Legacy)</option>
                   </>
                 ) : (
                   <>

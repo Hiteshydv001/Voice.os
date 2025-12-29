@@ -2,7 +2,8 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8081';
 
 const replaceAgentNameInScript = (script: string, agentName: string): string => {
   // Replace any name in greeting patterns with the actual agent name
-  return script.replace(/(?:Hello|Hi|Hey),?\s+(?:this\s+is|I'm|I am)\s+[A-Z][a-z]+/gi, (match) => {
+  // Handles: "Hello this is James", "Hi, I'm TESTING", "Hey I am SarahBot", etc.
+  return script.replace(/(?:Hello|Hi|Hey),?\s+(?:this\s+is|I'm|I am)\s+[A-Za-z0-9_]+/gi, (match) => {
     const greeting = match.split(/\s+(?:this\s+is|I'm|I am)\s+/i)[0];
     return `${greeting} this is ${agentName}`;
   });

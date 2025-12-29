@@ -244,7 +244,7 @@ app.post("/api/gemini/generate", async (req: Request, res: Response) => {
     const textContent = systemPrompt ? `${systemPrompt}\n\nUser: ${prompt}` : prompt;
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/${finalModel}:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${finalModel}:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

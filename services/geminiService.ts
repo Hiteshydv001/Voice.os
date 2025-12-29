@@ -35,7 +35,11 @@ export const generateAgentScript = async (
     }
 
     const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+    let text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+    
+    // Strip markdown code blocks if present
+    text = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+    
     return JSON.parse(text);
   } catch (error) {
     console.error("Failed to generate script:", error);

@@ -37,12 +37,6 @@ interface Voice {
   description?: string;
 }
 
-interface VoicesResponse {
-  success: boolean;
-  voices?: Voice[];
-  error?: string;
-}
-
 /**
  * Convert text to speech using Minimax
  */

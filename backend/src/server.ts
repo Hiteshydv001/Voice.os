@@ -239,7 +239,7 @@ app.post("/api/gemini/generate", async (req: Request, res: Response) => {
   }
 
   try {
-    const finalModel = model || 'gemini-2.5-flash';
+    const finalModel = model || 'gemini-2.0-flash-exp';
     const finalTemp = temperature !== undefined ? temperature : 0.7;
     const textContent = systemPrompt ? `${systemPrompt}\n\nUser: ${prompt}` : prompt;
 
@@ -259,7 +259,9 @@ app.post("/api/gemini/generate", async (req: Request, res: Response) => {
     );
 
     if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error(`Gemini API error: ${response.status} - ${errorText}`);
+      throw new Error(`Gemini API error: ${response.status} - Model: ${finalModel}`);
     }
 
     const data = await response.json();

@@ -28,7 +28,7 @@ export function NodeConfigModal({
         case 'llm':
           setConfig({
             provider: 'gemini',
-            model: 'gemini-2.5-flash',
+            model: 'gemini-2.0-flash-exp',
             temperature: 0.7,
             systemPrompt: 'You are a helpful AI assistant.',
           });
@@ -77,7 +77,11 @@ export function NodeConfigModal({
               </label>
               <select
                 value={config.provider || 'gemini'}
-                onChange={(e) => setConfig({ ...config, provider: e.target.value })}
+                onChange={(e) => {
+                  const newProvider = e.target.value;
+                  const newModel = newProvider === 'gemini' ? 'gemini-2.0-flash-exp' : 'llama-3.3-70b-versatile';
+                  setConfig({ ...config, provider: newProvider, model: newModel });
+                }}
                 className="w-full px-3 py-2 border-2 border-black font-mono text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
                 <option value="gemini">Google Gemini</option>
@@ -96,10 +100,9 @@ export function NodeConfigModal({
               >
                 {config.provider === 'gemini' ? (
                   <>
-                    <option value="gemini-2.5-flash">Gemini 2.5 Flash (Recommended)</option>
-                    <option value="gemini-2.5-pro">Gemini 2.5 Pro (Most Capable)</option>
-                    <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite (Fastest)</option>
-                    <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Legacy)</option>
+                    <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Recommended)</option>
+                    <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                    <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
                   </>
                 ) : (
                   <>

@@ -1,5 +1,5 @@
 import { db } from './firebase';
-import { doc, setDoc, getDoc, onSnapshot, Unsubscribe, increment, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, setDoc, getDoc, onSnapshot, Unsubscribe } from 'firebase/firestore';
 
 export interface DailyTrafficData {
   name: string;

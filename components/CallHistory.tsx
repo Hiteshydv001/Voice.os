@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../services/firebase';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
-import { Phone, Clock, User, FileText, PlayCircle, Download, Filter, Search, Calendar, TrendingUp, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { Phone, Clock, FileText, PlayCircle, Download, Filter, Search, Calendar, TrendingUp, AlertCircle, CheckCircle, XCircle, Terminal } from 'lucide-react';
 import { CallHistoryRecord } from '../types';
 
 const CallHistory: React.FC = () => {

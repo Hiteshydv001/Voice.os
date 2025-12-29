@@ -227,7 +227,7 @@ const UserActivity: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-2 max-h-96 overflow-y-auto">
-            {stats.recentActivities.map((activity, index) => (
+            {stats.recentActivities.map((activity) => (
               <div
                 key={activity.id}
                 className="border-2 border-black p-4 hover:bg-stone-50 transition-colors"

@@ -20,12 +20,19 @@ export function TestRunnerModal({ isOpen, onClose, nodes, edges, flowName }: Tes
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   if (!isOpen) return null;
+
+  const showCustomAlert = (message: string) => {
+    setAlertMessage(message);
+    setShowAlert(true);
+  };
 
   const handleAudioFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -69,7 +76,7 @@ export function TestRunnerModal({ isOpen, onClose, nodes, edges, flowName }: Tes
 
     } catch (error) {
       console.error('Failed to start recording:', error);
-      alert('Failed to access microphone. Please check permissions.');
+      showCustomAlert('Failed to access microphone. Please check permissions.');
     }
   };
 
@@ -93,13 +100,13 @@ export function TestRunnerModal({ isOpen, onClose, nodes, edges, flowName }: Tes
 
   const handleRunTest = async () => {
     if (!testInput && !audioFile) {
-      alert('Please provide test input (text or audio file)');
+      showCustomAlert('Please provide test input (text or audio file)');
       return;
     }
 
     // Validate flow
     if (nodes.length === 0) {
-      alert('Flow is empty. Add nodes first.');
+      showCustomAlert('Flow is empty. Add nodes first.');
       return;
     }
 
@@ -107,7 +114,7 @@ export function TestRunnerModal({ isOpen, onClose, nodes, edges, flowName }: Tes
     const hasEnd = nodes.some(n => n.type === 'end');
     
     if (!hasStart || !hasEnd) {
-      alert('Flow must have both Start and End nodes');
+      showCustomAlert('Flow must have both Start and End nodes');
       return;
     }
 
@@ -415,6 +422,25 @@ export function TestRunnerModal({ isOpen, onClose, nodes, edges, flowName }: Tes
           )}
         </div>
       </div>
+
+      {/* Custom Alert Dialog */}
+      {showAlert && (
+        <div className="fixed inset-0 bg-black/75 z-[60] flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-stone-900 border-2 border-orange-600 rounded-lg p-4 sm:p-6 w-full max-w-[90vw] sm:max-w-md">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="text-2xl">⚠️</div>
+              <h3 className="text-lg sm:text-xl font-bold text-white font-mono uppercase">Alert</h3>
+            </div>
+            <p className="text-stone-300 text-sm sm:text-base mb-6">{alertMessage}</p>
+            <button
+              onClick={() => setShowAlert(false)}
+              className="w-full bg-orange-600 text-white font-bold py-2 sm:py-3 px-4 rounded border-2 border-orange-500 hover:bg-orange-700 transition-colors uppercase text-sm sm:text-base"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

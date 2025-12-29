@@ -11,33 +11,14 @@ interface Session {
   responseStartTimestamp?: number;
   latestMediaTimestamp?: number;
   openAIApiKey?: string;
-  agentConfig?: {
-    name: string;
-    opening: string;
-    goal?: string;
-    tone?: string;
-  };
-  pendingCallConfigs?: Map<string, any>; // Reference to pending configs
 }
 
 let session: Session = {};
 
-export function handleCallConnection(
-  ws: WebSocket,
-  openAIApiKey: string,
-  agentConfig?: { name: string; opening: string; goal?: string; tone?: string },
-  pendingConfigs?: Map<string, any>
-) {
+export function handleCallConnection(ws: WebSocket, openAIApiKey: string) {
   cleanupConnection(session.twilioConn);
   session.twilioConn = ws;
   session.openAIApiKey = openAIApiKey;
-  session.agentConfig = agentConfig || {
-    name: "AI Assistant",
-    opening: "Hello! How can I help you today?",
-    goal: "assist the customer",
-    tone: "Professional and friendly"
-  };
-  session.pendingCallConfigs = pendingConfigs;
 
   ws.on("message", handleTwilioMessage);
   ws.on("error", ws.close);
@@ -104,20 +85,6 @@ function handleTwilioMessage(data: RawData) {
       session.latestMediaTimestamp = 0;
       session.lastAssistantItem = undefined;
       session.responseStartTimestamp = undefined;
-      
-      // Check if callId is in customParameters from Stream <Parameter> tags
-      if (msg.start?.customParameters?.callId && session.pendingCallConfigs) {
-        const callId = msg.start.customParameters.callId;
-        console.log(`📦 Received callId from Stream parameters: ${callId}`);
-        
-        const agentConfig = session.pendingCallConfigs.get(callId);
-        if (agentConfig) {
-          console.log(`✅ Retrieved agent config from Stream callId:`, JSON.stringify(agentConfig));
-          session.agentConfig = agentConfig;
-          session.pendingCallConfigs.delete(callId);
-        }
-      }
-      
       tryConnectModel();
       break;
     case "media":
@@ -165,11 +132,6 @@ function tryConnectModel() {
 
   session.modelConn.on("open", () => {
     const config = session.saved_config || {};
-    const agentName = session.agentConfig?.name || "AI Assistant";
-    const agentGoal = session.agentConfig?.goal || "assist the customer";
-    const agentTone = session.agentConfig?.tone || "Professional, friendly, and concise";
-    const agentOpening = session.agentConfig?.opening || `Hello! This is ${agentName}. How can I help you today?`;
-    
     jsonSend(session.modelConn, {
       type: "session.update",
       session: {
@@ -179,7 +141,20 @@ function tryConnectModel() {
         input_audio_transcription: { model: "whisper-1" },
         input_audio_format: "g711_ulaw",
         output_audio_format: "g711_ulaw",
-        instructions: `You are ${agentName}. Your goal is to ${agentGoal}. Tone: ${agentTone}. Keep your responses short (under 2 sentences).`,
+        tools: functions.map((f) => f.schema),
+        tool_choice: "auto",
+        instructions: `You are James, a Senior Sales Rep for Voice Marketing AI.
+
+Your goal: Briefly explain the value of voice AI for marketing and sales, then try to schedule a 15-minute demo.
+
+Behavior:
+- Keep responses short and conversational (1-2 sentences max)
+- Ask if they'd like to schedule a demo
+- If they agree (yes, ok, sure, sounds good, etc.), ask when works best for them
+- When they provide a specific time, IMMEDIATELY call the schedule_demo tool
+- After booking, confirm the appointment time
+
+Tone: Professional, friendly, and concise.`,
         ...config,
       },
     });
@@ -189,7 +164,7 @@ function tryConnectModel() {
       type: "response.create",
       response: {
         modalities: ["text", "audio"],
-        instructions: `Please say exactly the following sentence: ${agentOpening}`,
+        instructions: "Please say exactly the following sentence: Hello! This is James from Voice Marketing AI. How are you doing today?",
       },
     });
   });

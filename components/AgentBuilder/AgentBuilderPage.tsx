@@ -36,6 +36,11 @@ const AgentBuilderContent: React.FC = () => {
   const [flowName, setFlowName] = useState('New Agent Flow');
   const [saving, setSaving] = useState(false);
   const [userFlows, setUserFlows] = useState<AgentFlow[]>([]);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [confirmDialogData, setConfirmDialogData] = useState<{ templateId: string; templateName: string } | null>(null);
+  const [showNewFlowDialog, setShowNewFlowDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteDialogData, setDeleteDialogData] = useState<{ nodeCount: number; edgeCount: number; selectedNodeIds: string[]; selectedEdgeIds: string[] } | null>(null);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
   // Load user flows on mount
@@ -52,7 +57,7 @@ const AgentBuilderContent: React.FC = () => {
       case 'llm':
         return {
           provider: 'gemini',
-          model: 'gemini-flash-latest',
+          model: 'gemini-2.0-flash',
           temperature: 0.7,
           systemPrompt: 'You are a helpful AI assistant.',
         };
@@ -63,8 +68,8 @@ const AgentBuilderContent: React.FC = () => {
         };
       case 'tts':
         return {
-          voice: 'presenter_female',
-          model: 'speech-02-turbo',
+          voice: '21m00Tcm4TlvDq8ikWAM', // Rachel
+          model: 'eleven_monolingual_v1',
         };
       case 'start':
         return {
@@ -161,21 +166,35 @@ const AgentBuilderContent: React.FC = () => {
       return;
     }
 
-    const confirmMessage = `Delete ${selectedNodeIds.length} node(s) and ${selectedEdgeIds.length} connection(s)?`;
-    if (confirm(confirmMessage)) {
-      // Delete selected nodes
-      setNodes(prevNodes => prevNodes.filter(n => !n.selected));
-      
-      // Delete selected edges and edges connected to deleted nodes
-      setEdges(prevEdges => 
-        prevEdges.filter(e => 
-          !e.selected && 
-          !selectedNodeIds.includes(e.source) && 
-          !selectedNodeIds.includes(e.target)
-        )
-      );
-    }
-  }, [nodes, edges, setNodes, setEdges]);
+    setDeleteDialogData({
+      nodeCount: selectedNodeIds.length,
+      edgeCount: selectedEdgeIds.length,
+      selectedNodeIds,
+      selectedEdgeIds
+    });
+    setShowDeleteDialog(true);
+  }, [nodes, edges]);
+
+  const handleConfirmDelete = useCallback(() => {
+    if (!deleteDialogData) return;
+
+    const { selectedNodeIds } = deleteDialogData;
+
+    // Delete selected nodes
+    setNodes(prevNodes => prevNodes.filter(n => !n.selected));
+    
+    // Delete selected edges and edges connected to deleted nodes
+    setEdges(prevEdges => 
+      prevEdges.filter(e => 
+        !e.selected && 
+        !selectedNodeIds.includes(e.source) && 
+        !selectedNodeIds.includes(e.target)
+      )
+    );
+
+    setShowDeleteDialog(false);
+    setDeleteDialogData(null);
+  }, [deleteDialogData, setNodes, setEdges]);
 
   const handleSaveConfig = useCallback(
     (nodeId: string, config: NodeConfig) => {
@@ -256,28 +275,42 @@ const AgentBuilderContent: React.FC = () => {
   }, [setNodes, setEdges]);
 
   const handleNewFlow = useCallback(() => {
-    if (confirm('Create a new flow? Unsaved changes will be lost.')) {
-      const newFlow = createNewFlow(currentUser?.uid || '', 'New Agent Flow');
-      setNodes(newFlow.nodes);
-      setEdges(newFlow.edges);
-      setCurrentFlowId(null);
-      setFlowName(newFlow.name);
-    }
+    setShowNewFlowDialog(true);
+  }, []);
+
+  const handleConfirmNewFlow = useCallback(() => {
+    const newFlow = createNewFlow(currentUser?.uid || '', 'New Agent Flow');
+    setNodes(newFlow.nodes);
+    setEdges(newFlow.edges);
+    setCurrentFlowId(null);
+    setFlowName(newFlow.name);
+    setShowNewFlowDialog(false);
   }, [currentUser, setNodes, setEdges]);
 
   const handleLoadTemplate = useCallback((templateId: string) => {
     const template = agentTemplates.find(t => t.id === templateId);
     if (!template) return;
 
-    if (confirm(`Load template: ${template.name}? Current work will be replaced.`)) {
-      setNodes(template.flow.nodes);
-      setEdges(template.flow.edges);
-      setCurrentFlowId(null);
-      setFlowName(template.name);
-      setShowTemplates(false);
-      alert(`Template "${template.name}" loaded successfully!`);
-    }
-  }, [setNodes, setEdges]);
+    // Show custom confirmation dialog
+    setConfirmDialogData({ templateId, templateName: template.name });
+    setShowConfirmDialog(true);
+  }, []);
+
+  const handleConfirmLoadTemplate = useCallback(() => {
+    if (!confirmDialogData) return;
+    
+    const template = agentTemplates.find(t => t.id === confirmDialogData.templateId);
+    if (!template) return;
+
+    setNodes(template.flow.nodes);
+    setEdges(template.flow.edges);
+    setCurrentFlowId(null);
+    setFlowName(template.name);
+    setShowTemplates(false);
+    setShowConfirmDialog(false);
+    setConfirmDialogData(null);
+    alert(`Template "${template.name}" loaded successfully!`);
+  }, [confirmDialogData, setNodes, setEdges]);
 
   const handleTestFlow = useCallback(() => {
     setShowTestRunner(true);
@@ -562,6 +595,114 @@ const AgentBuilderContent: React.FC = () => {
         edges={edges as any}
         flowName={flowName}
       />
+
+      {/* New Flow Confirmation Dialog */}
+      {showNewFlowDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[60]">
+          <div className="bg-stone-900 border-2 border-orange-600 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div className="mb-5">
+              <h3 className="text-xl font-bold text-white mb-2 font-mono uppercase">
+                Create New Flow
+              </h3>
+              <p className="text-stone-300 leading-relaxed">
+                Creating a new flow will clear your current work.
+              </p>
+              <p className="text-stone-400 text-sm mt-2">
+                Unsaved changes will be lost.
+              </p>
+            </div>
+            
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowNewFlowDialog(false)}
+                className="px-5 py-2.5 bg-stone-800 hover:bg-stone-700 text-white rounded font-medium transition-colors border border-stone-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmNewFlow}
+                className="px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded font-medium transition-colors shadow-lg shadow-orange-900/50"
+              >
+                Create New Flow
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteDialog && deleteDialogData && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[60]">
+          <div className="bg-stone-900 border-2 border-red-600 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div className="mb-5">
+              <h3 className="text-xl font-bold text-white mb-2 font-mono uppercase">
+                Delete Selected
+              </h3>
+              <p className="text-stone-300 leading-relaxed">
+                Delete <span className="text-red-500 font-semibold">{deleteDialogData.nodeCount} node(s)</span> and <span className="text-red-500 font-semibold">{deleteDialogData.edgeCount} connection(s)</span>?
+              </p>
+              <p className="text-stone-400 text-sm mt-2">
+                This action cannot be undone.
+              </p>
+            </div>
+            
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setShowDeleteDialog(false);
+                  setDeleteDialogData(null);
+                }}
+                className="px-5 py-2.5 bg-stone-800 hover:bg-stone-700 text-white rounded font-medium transition-colors border border-stone-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded font-medium transition-colors shadow-lg shadow-red-900/50"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Load Template Dialog */}
+      {showConfirmDialog && confirmDialogData && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[60]">
+          <div className="bg-stone-900 border-2 border-orange-600 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div className="mb-5">
+              <h3 className="text-xl font-bold text-white mb-2 font-mono uppercase">
+                Load Template
+              </h3>
+              <p className="text-stone-300 leading-relaxed">
+                Loading "<span className="text-orange-500 font-semibold">{confirmDialogData.templateName}</span>" will replace your current work.
+              </p>
+              <p className="text-stone-400 text-sm mt-2">
+                This action cannot be undone.
+              </p>
+            </div>
+            
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setShowConfirmDialog(false);
+                  setConfirmDialogData(null);
+                }}
+                className="px-5 py-2.5 bg-stone-800 hover:bg-stone-700 text-white rounded font-medium transition-colors border border-stone-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmLoadTemplate}
+                className="px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded font-medium transition-colors shadow-lg shadow-orange-900/50"
+              >
+                Load Template
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* API Keys Modal */}
       <APIKeysModal isOpen={showAPIKeys} onClose={() => setShowAPIKeys(false)} />

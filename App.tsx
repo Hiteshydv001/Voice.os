@@ -7,8 +7,6 @@ import LandingPage from './components/LandingPage';
 import Login from './components/Auth/Login';
 import SignUp from './components/Auth/SignUp';
 import Dashboard from './components/Dashboard';
-import UserActivity from './components/UserActivity';
-import CallHistory from './components/CallHistory';
 import AgentBuilder from './components/AgentBuilder';
 import { AgentBuilderPage } from './components/AgentBuilder/AgentBuilderPage';
 import LeadsManager from './components/LeadsManager';
@@ -17,10 +15,11 @@ import CallSimulator from './components/CallSimulator';
 import SubscriptionModal from './components/SubscriptionModal';
 import PaymentSuccess from './components/PaymentSuccess';
 import VoiceCloning from './components/VoiceCloning';
+import DemoSchedule from './components/DemoSchedule';
 import { storage } from './services/storageService';
 import { makeOutboundCall } from './services/twilioService';
 import { deductCredits } from './services/userService';
-import { Agent, Campaign, Lead, ActivityLog, CallHistoryRecord } from './types';
+import { Agent, Campaign, Lead, ActivityLog } from './types';
 import { Phone, Edit, Bot } from 'lucide-react';
 
 // Suppress ResizeObserver warnings globally (known React Flow issue)
@@ -123,14 +122,6 @@ const AppContent: React.FC = () => {
     const updatedLeads = [...newLeads, ...leads];
     setLeads(updatedLeads);
     storage.saveLeads(currentUser.uid, updatedLeads);
-    
-    // Log activity
-    handleAddLog({
-      id: `log_${Date.now()}`,
-      action: 'Leads Imported',
-      timestamp: new Date().toISOString(),
-      details: `Imported ${newLeads.length} new leads`
-    });
   };
 
   const handleDeleteLead = (leadId: string) => {
@@ -142,17 +133,8 @@ const AppContent: React.FC = () => {
 
   const handleClearAllLeads = () => {
     if (!currentUser) return;
-    const count = leads.length;
     setLeads([]);
     storage.saveLeads(currentUser.uid, []);
-    
-    // Log activity
-    handleAddLog({
-      id: `log_${Date.now()}`,
-      action: 'Leads Cleared',
-      timestamp: new Date().toISOString(),
-      details: `Cleared all ${count} leads from database`
-    });
   };
 
   const handleDeleteCampaign = (campaignId: string) => {
@@ -220,14 +202,6 @@ const AppContent: React.FC = () => {
     setCampaigns(updatedCampaigns);
     storage.saveCampaigns(currentUser.uid, updatedCampaigns);
 
-    // Log activity
-    handleAddLog({
-      id: `log_${Date.now()}`,
-      action: 'Campaign Started',
-      timestamp: new Date().toISOString(),
-      details: `Started campaign "${campaign.name}" with ${targetLeads.length} leads`
-    });
-
     alert(`Campaign Initialized. Starting calls for ${targetLeads.length} leads...`);
 
     // 4. Async Loop to process calls
@@ -265,8 +239,7 @@ const AppContent: React.FC = () => {
         try {
             // Perform the call with agent's custom script
             const callStartTime = Date.now();
-            const callStartTimeISO = new Date().toISOString();
-            const callResponse = await makeOutboundCall(lead.phone, agent);
+            await makeOutboundCall(lead.phone, agent.name, agent.script);
             const callDuration = Math.floor((Date.now() - callStartTime) / 1000);
 
             // Record successful call result
@@ -281,32 +254,6 @@ const AppContent: React.FC = () => {
                 notes: 'Call completed successfully'
             };
             callResults.push(callResult);
-
-            // Save to Call History with callSid for recording retrieval
-            const callHistoryRecord: CallHistoryRecord = {
-                id: `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                userId: currentUser.uid,
-                callSid: callResponse?.callSid, // Store Twilio Call SID for recording retrieval
-                agentId: agent.id,
-                agentName: agent.name,
-                leadId: lead.id,
-                leadName: lead.name,
-                leadPhone: lead.phone,
-                callType: 'Campaign',
-                campaignId: campaign.id,
-                campaignName: campaign.name,
-                status: 'Completed',
-                duration: callDuration,
-                timestamp: new Date().toISOString(),
-                startTime: callStartTimeISO,
-                endTime: new Date().toISOString(),
-                script: agent.script,
-                aiModel: 'gemini-flash-latest',
-                sentiment: callResult.sentiment,
-                outcome: 'Call completed successfully',
-                notes: `Campaign call to ${lead.name}. Status: Success`
-            };
-            await storage.saveCallHistory(currentUser.uid, callHistoryRecord);
 
             // DEDUCT CREDITS
             await deductCredits(currentUser.uid, costPerCall);
@@ -423,8 +370,6 @@ const AppContent: React.FC = () => {
         }>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard agents={agents} logs={logs} onAddLog={handleAddLog} />} />
-          <Route path="activity" element={<UserActivity />} />
-          <Route path="call-history" element={<CallHistory />} />
           <Route 
             path="agents" 
             element={
@@ -511,6 +456,10 @@ const AppContent: React.FC = () => {
           <Route 
             path="voice-cloning" 
             element={<VoiceCloning />} 
+          />
+          <Route 
+            path="demos" 
+            element={<DemoSchedule />} 
           />
           <Route 
             path="visual-builder" 

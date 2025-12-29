@@ -26,27 +26,27 @@ const chartData = [
 ];
 
 const StatCard = ({ title, value, change, icon: Icon, colorClass, action }: any) => (
-  <div className="bg-white p-6 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden">
+  <div className="bg-white p-4 sm:p-6 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden">
     <div className="flex items-center justify-between">
-      <div>
-        <p className="text-xs font-bold text-stone-500 uppercase tracking-widest">{title}</p>
-        <p className="text-3xl font-bold text-black mt-2 font-mono">{value}</p>
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] sm:text-xs font-bold text-stone-500 uppercase tracking-widest truncate">{title}</p>
+        <p className="text-2xl sm:text-3xl font-bold text-black mt-1 sm:mt-2 font-mono">{value}</p>
       </div>
-      <div className={`p-3 border-2 border-black ${colorClass}`}>
-        <Icon className="h-6 w-6 text-black" />
+      <div className={`p-2 sm:p-3 border-2 border-black ${colorClass} flex-shrink-0 ml-2`}>
+        <Icon className="h-5 w-5 sm:h-6 sm:w-6 text-black" />
       </div>
     </div>
     {change && (
-      <div className="mt-4 flex items-center text-sm font-mono border-t-2 border-stone-100 pt-2">
+      <div className="mt-3 sm:mt-4 flex items-center text-xs sm:text-sm font-mono border-t-2 border-stone-100 pt-2">
         <span className="text-green-600 font-bold flex items-center">
-          <TrendingUp className="h-4 w-4 mr-2" />
+          <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
           {change}
         </span>
-        <span className="text-stone-400 ml-2 uppercase">vs last week</span>
+        <span className="text-stone-400 ml-2 uppercase text-[10px] sm:text-xs">vs last week</span>
       </div>
     )}
     {action && (
-        <div className="mt-4 pt-2 border-t-2 border-stone-100">
+        <div className="mt-3 sm:mt-4 pt-2 border-t-2 border-stone-100">
             {action}
         </div>
     )}
@@ -86,13 +86,8 @@ const Dashboard: React.FC<DashboardProps> = ({ agents = [], logs = [], onAddLog 
     try {
         setCallStatus('calling');
         
-        const callStartTime = Date.now();
-        const callStartTimeISO = new Date().toISOString();
-        
-        // Call the real Twilio Service with full agent object
-        const callResult = await makeOutboundCall(dialerNumber, agent);
-        
-        const callDuration = Math.floor((Date.now() - callStartTime) / 1000);
+        // Call the real Twilio Service
+        await makeOutboundCall(dialerNumber, agent.name);
         
         // Deduct Credits
         await deductCredits(currentUser.uid, CREDIT_COST_PER_CALL);
@@ -110,30 +105,6 @@ const Dashboard: React.FC<DashboardProps> = ({ agents = [], logs = [], onAddLog 
         };
         onAddLog(newLog);
 
-        // Save to Call History with callSid for recording retrieval
-        const callHistoryRecord: import('../types').CallHistoryRecord = {
-          id: `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          userId: currentUser.uid,
-          callSid: callResult?.callSid, // Store Twilio Call SID for recording retrieval
-          agentId: agent.id,
-          agentName: agent.name,
-          leadPhone: dialerNumber,
-          callType: 'Manual',
-          status: 'Completed',
-          duration: callDuration,
-          timestamp: new Date().toISOString(),
-          startTime: callStartTimeISO,
-          endTime: new Date().toISOString(),
-          script: agent.script,
-          aiModel: 'gemini-flash-latest',
-          sentiment: 'Neutral',
-          outcome: 'Manual call completed',
-          notes: `Quick dial call to ${dialerNumber}`
-        };
-        await import('../services/storageService').then(module => 
-          module.storage.saveCallHistory(currentUser.uid, callHistoryRecord)
-        );
-
         // Reset after success
         setTimeout(() => {
           setCallStatus('idle');
@@ -150,7 +121,7 @@ const Dashboard: React.FC<DashboardProps> = ({ agents = [], logs = [], onAddLog 
 
   const totalCalls = logs.length;
   // Simple calculation for demo purposes
-  const qualifiedLeads = logs.filter(l => l.status?.includes('Qualified')).length; 
+  const qualifiedLeads = logs.filter(l => l.status.includes('Qualified')).length; 
 
   return (
     <div className="space-y-8 font-mono">
@@ -164,26 +135,26 @@ const Dashboard: React.FC<DashboardProps> = ({ agents = [], logs = [], onAddLog 
 
       {/* Dialer Modal */}
       {isDialerOpen && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white border-4 border-black w-full max-w-sm overflow-hidden shadow-[8px_8px_0px_0px_rgba(255,255,255,1)]">
-            <div className="bg-black p-4 text-white flex justify-between items-center border-b-4 border-black">
-              <h3 className="font-bold text-lg flex items-center uppercase tracking-wider">
-                <PhoneOutgoing className="h-5 w-5 mr-3" />
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-sm">
+          <div className="bg-white border-2 sm:border-4 border-black w-full max-w-sm overflow-hidden shadow-[4px_4px_0px_0px_rgba(255,255,255,1)] sm:shadow-[8px_8px_0px_0px_rgba(255,255,255,1)] max-h-[90vh] flex flex-col">
+            <div className="bg-black p-3 sm:p-4 text-white flex justify-between items-center border-b-2 sm:border-b-4 border-black flex-shrink-0">
+              <h3 className="font-bold text-base sm:text-lg flex items-center uppercase tracking-wider">
+                <PhoneOutgoing className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3" />
                 Quick Dial
               </h3>
               <button onClick={() => setIsDialerOpen(false)} className="text-white hover:text-orange-500 transition-colors">
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </div>
             
-            <div className="p-6 space-y-6 bg-stone-50">
+            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 bg-stone-50 overflow-y-auto flex-1">
               {callStatus === 'idle' || callStatus === 'error' ? (
                 <>
                   <div className="bg-white border-2 border-black p-3 flex items-start justify-between">
                     <div className="flex items-start">
-                        <Coins className="h-5 w-5 text-black mt-0.5 mr-3 shrink-0" />
+                        <Coins className="h-4 w-4 sm:h-5 sm:w-5 text-black mt-0.5 mr-2 sm:mr-3 shrink-0" />
                         <div>
-                        <p className="text-xs font-bold uppercase text-black">Balance</p>
+                        <p className="text-[10px] sm:text-xs font-bold uppercase text-black">Balance</p>
                         <p className={`text-sm font-bold font-mono ${(userProfile?.credits || 0) < 5 ? 'text-red-600' : 'text-stone-600'}`}>
                             {userProfile?.credits || 0} CR
                         </p>
@@ -197,7 +168,7 @@ const Dashboard: React.FC<DashboardProps> = ({ agents = [], logs = [], onAddLog 
 
                   {callStatus === 'error' && (
                     <div className="bg-red-100 border-2 border-red-600 p-3 flex items-start text-red-900">
-                        <AlertTriangle className="h-5 w-5 mr-2 shrink-0" />
+                        <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 mr-2 shrink-0" />
                         <p className="text-xs font-bold">{errorMessage}</p>
                     </div>
                   )}
@@ -207,7 +178,7 @@ const Dashboard: React.FC<DashboardProps> = ({ agents = [], logs = [], onAddLog 
                     <input 
                       type="tel" 
                       placeholder="+1 (555) 000-0000"
-                      className="w-full px-4 py-3 border-2 border-black bg-white focus:outline-none focus:ring-0 focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-shadow text-lg font-mono"
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-black bg-white focus:outline-none focus:ring-0 focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-shadow text-base sm:text-lg font-mono"
                       value={dialerNumber}
                       onChange={e => setDialerNumber(e.target.value)}
                     />
@@ -215,7 +186,7 @@ const Dashboard: React.FC<DashboardProps> = ({ agents = [], logs = [], onAddLog 
                   <div>
                     <label className="block text-xs font-bold uppercase text-black mb-2">Deploy Agent</label>
                     <select 
-                      className="w-full px-4 py-3 border-2 border-black bg-white focus:outline-none focus:ring-0 focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-shadow font-mono"
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border-2 border-black bg-white focus:outline-none focus:ring-0 focus:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-shadow font-mono text-sm sm:text-base"
                       value={selectedAgentId}
                       onChange={e => setSelectedAgentId(e.target.value)}
                     >
@@ -263,31 +234,32 @@ const Dashboard: React.FC<DashboardProps> = ({ agents = [], logs = [], onAddLog 
         </div>
       )}
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-black text-black uppercase tracking-tighter">Command Center</h1>
-          <p className="text-stone-600 mt-1 font-mono text-sm">System Status: OPERATIONAL // {new Date().toLocaleDateString()}</p>
+          <h1 className="text-2xl sm:text-3xl font-black text-black uppercase tracking-tighter">Command Center</h1>
+          <p className="text-stone-600 mt-1 font-mono text-xs sm:text-sm">System Status: OPERATIONAL // {new Date().toLocaleDateString()}</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <button 
             onClick={() => {
                 setIsDialerOpen(true);
                 setCallStatus('idle');
                 setErrorMessage('');
             }}
-            className="flex items-center bg-black text-white px-6 py-3 border-2 border-black font-bold uppercase hover:bg-white hover:text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+            className="flex items-center bg-black text-white px-4 sm:px-6 py-2 sm:py-3 border-2 border-black font-bold uppercase text-xs sm:text-sm hover:bg-white hover:text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-none flex-1 sm:flex-initial justify-center"
           >
             <PhoneOutgoing className="h-4 w-4 mr-2" />
-            Manual Override
+            <span className="hidden xs:inline">Manual Override</span>
+            <span className="xs:hidden">Dial</span>
           </button>
-          <div className="hidden md:flex items-center bg-white border-2 border-black text-black px-4 py-3 font-bold text-sm shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-            <Activity className="h-4 w-4 mr-2 text-green-600" />
-            ONLINE
+          <div className="flex items-center bg-white border-2 border-black text-black px-3 sm:px-4 py-2 sm:py-3 font-bold text-xs sm:text-sm shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+            <Activity className="h-4 w-4 mr-1 sm:mr-2 text-green-600" />
+            <span className="hidden xs:inline">ONLINE</span>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <StatCard 
           title="Available Credits" 
           value={userProfile?.credits || 0} 
@@ -322,12 +294,12 @@ const Dashboard: React.FC<DashboardProps> = ({ agents = [], logs = [], onAddLog 
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white p-6 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-lg font-bold text-black uppercase tracking-wider border-b-2 border-black pb-1">Traffic Analysis</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="lg:col-span-2 bg-white p-4 sm:p-6 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+          <div className="flex justify-between items-center mb-4 sm:mb-6">
+            <h2 className="text-base sm:text-lg font-bold text-black uppercase tracking-wider border-b-2 border-black pb-1">Traffic Analysis</h2>
           </div>
-          <div className="h-80 font-mono text-xs">
+          <div className="h-64 sm:h-80 font-mono text-xs">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="0" vertical={false} stroke="#000" strokeWidth={1} strokeOpacity={0.1} />
@@ -343,30 +315,30 @@ const Dashboard: React.FC<DashboardProps> = ({ agents = [], logs = [], onAddLog 
           </div>
         </div>
 
-        <div className="bg-white p-6 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col h-[450px]">
-          <h2 className="text-lg font-bold text-black uppercase tracking-wider border-b-2 border-black pb-1 mb-4">Terminal Log</h2>
-          <div className="space-y-0 flex-1 overflow-y-auto pr-2 bg-stone-100 border-2 border-black p-4 font-mono text-xs">
+        <div className="bg-white p-4 sm:p-6 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col h-[400px] sm:h-[450px]">
+          <h2 className="text-base sm:text-lg font-bold text-black uppercase tracking-wider border-b-2 border-black pb-1 mb-3 sm:mb-4">Terminal Log</h2>
+          <div className="space-y-0 flex-1 overflow-y-auto pr-2 bg-stone-100 border-2 border-black p-3 sm:p-4 font-mono text-xs">
             {logs.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-stone-400">
                     <span className="mb-2">_NO_DATA_</span>
-                    <span>Waiting for input...</span>
+                    <span className="text-[10px] sm:text-xs">Waiting for input...</span>
                 </div>
             ) : (
                 logs.slice().reverse().map((log, _idx) => (
-                <div key={log.id} className="mb-3 pb-3 border-b border-stone-300 last:border-0">
+                <div key={log.id} className="mb-2 sm:mb-3 pb-2 sm:pb-3 border-b border-stone-300 last:border-0">
                     <div className="flex items-center justify-between mb-1">
-                        <span className="font-bold text-black">{log.time || log.timestamp}</span>
-                        <span className={`px-1 py-0.5 text-[10px] border border-black uppercase font-bold ${
-                           log.status?.includes('Outbound') ? 'bg-blue-200 text-black' : 
+                        <span className="font-bold text-black text-[10px] sm:text-xs">{log.time}</span>
+                        <span className={`px-1 py-0.5 text-[9px] sm:text-[10px] border border-black uppercase font-bold ${
+                           log.status.includes('Outbound') ? 'bg-blue-200 text-black' : 
                            log.status === 'Qualified Lead' ? 'bg-green-200 text-black' : 
                            log.status === 'No Answer' ? 'bg-red-200 text-black' : 'bg-white text-black'
                         }`}>
-                            {log.status || log.action || 'Unknown'}
+                            {log.status}
                         </span>
                     </div>
-                    <div className="flex items-center text-stone-600">
+                    <div className="flex items-center text-stone-600 text-[10px] sm:text-xs">
                         <span className="mr-2">{'>'}</span>
-                        <span>{log.phone}</span>
+                        <span className="truncate">{log.phone}</span>
                     </div>
                 </div>
                 ))

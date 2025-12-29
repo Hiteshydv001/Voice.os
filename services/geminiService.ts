@@ -17,10 +17,8 @@ export const generateAgentScript = async (
     - Product: ${product}
     - Goal: ${goal}
 
-    IMPORTANT: The agent must introduce itself with its exact name "${name}" in the opening line.
-
     Return a JSON object containing:
-    - "opening": A natural, short opening line (under 2 sentences). MUST start with "Hi, this is ${name}" or "Hello, this is ${name}".
+    - "opening": A natural, short opening line (under 2 sentences).
     - "objectionHandling": A strategy or line to handle common objections.
     - "closing": A strong closing line to achieve the goal.
   `;
@@ -28,7 +26,10 @@ export const generateAgentScript = async (
   try {
     const response = await fetch(`${BACKEND_URL}/api/gemini/generate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true'
+      },
       body: JSON.stringify({ prompt }),
     });
 
@@ -37,11 +38,7 @@ export const generateAgentScript = async (
     }
 
     const data = await response.json();
-    let text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-    
-    // Strip markdown code blocks if present
-    text = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-    
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
     return JSON.parse(text);
   } catch (error) {
     console.error("Failed to generate script:", error);
@@ -87,7 +84,10 @@ export const chatWithAgent = async (
   try {
     const response = await fetch(`${BACKEND_URL}/api/gemini/generate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true'
+      },
       body: JSON.stringify({ prompt: fullPrompt }),
     });
 

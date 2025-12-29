@@ -120,13 +120,17 @@ const CampaignManager: React.FC<CampaignManagerProps> = ({ agents, campaigns, le
     const checkTwilio = async () => {
       try {
         const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8081';
-        const response = await fetch(`${backendUrl}/api/twilio`);
+        const response = await fetch(`${backendUrl}/api/twilio`, {
+          headers: { 'ngrok-skip-browser-warning': 'true' }
+        });
         const { credentialsSet } = await response.json();
         setIsTwilioConfigured(credentialsSet);
         
         if (credentialsSet) {
           // Get phone numbers from backend
-          const numbersResponse = await fetch(`${backendUrl}/api/twilio/numbers`);
+          const numbersResponse = await fetch(`${backendUrl}/api/twilio/numbers`, {
+            headers: { 'ngrok-skip-browser-warning': 'true' }
+          });
           const { numbers } = await numbersResponse.json();
           if (numbers && numbers.length > 0) {
             setTwilioPhoneNumber(numbers[0].phoneNumber);

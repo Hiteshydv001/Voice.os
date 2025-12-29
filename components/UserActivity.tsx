@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../services/firebase';
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Activity, Bot, Users, PhoneOutgoing, Calendar, TrendingUp, BarChart3, Clock } from 'lucide-react';
 
 interface ActivityStats {
@@ -65,25 +65,30 @@ const UserActivity: React.FC = () => {
       const campaignsSnapshot = await getDocs(campaignsQuery);
       const totalCampaigns = campaignsSnapshot.size;
 
-      // Get recent activity logs
+      // Get recent activity logs (without orderBy to avoid index requirement)
       const logsQuery = query(
         collection(db, 'activity_logs'),
-        where('userId', '==', currentUser.uid),
-        orderBy('timestamp', 'desc'),
-        limit(20)
+        where('userId', '==', currentUser.uid)
       );
       const logsSnapshot = await getDocs(logsQuery);
-      const recentActivities = logsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as ActivityLog[];
+      const recentActivities = logsSnapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as ActivityLog[];
+      
+      // Sort by timestamp on client side and take last 20
+      recentActivities.sort((a, b) => 
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+      const limitedActivities = recentActivities.slice(0, 20);
 
       setStats({
         totalAgents: 0, // Legacy agents not stored in Firestore
         totalFlows,
         totalLeads,
         totalCampaigns,
-        recentActivities
+        recentActivities: limitedActivities
       });
     } catch (error) {
       console.error('Error loading activity stats:', error);

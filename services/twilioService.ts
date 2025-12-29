@@ -85,11 +85,9 @@ async function simulateCall(to: string, agentName: string) {
   if (isSuccessful) {
     console.log('✅ Simulated call successful');
     return {
-      sid: `CALL_SIM_${Date.now()}`,
-      status: 'completed',
-      to: to,
-      from: 'Simulated',
-      duration: Math.floor(callDuration / 1000)
+      callSid: `CALL_SIM_${Date.now()}`,
+      callId: `sim_${Date.now()}`,
+      status: 'completed'
     };
   } else {
     console.log('❌ Simulated call failed');

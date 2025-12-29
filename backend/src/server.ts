@@ -102,6 +102,12 @@ app.post("/twiml", (req, res) => {
     const wsUrl = new URL(PUBLIC_URL);
     wsUrl.protocol = "wss:";
     wsUrl.pathname = `/call`;
+    
+    // Get callId from query params if present
+    const callId = req.query.callId as string;
+    if (callId) {
+      wsUrl.searchParams.set('callId', callId);
+    }
 
     const twimlContent = twimlTemplate.replace("{{WS_URL}}", wsUrl.toString());
     res.type("text/xml").send(twimlContent);
@@ -163,7 +169,7 @@ app.get("/api/twilio/numbers", async (req: Request, res: Response) => {
 });
 
 app.post("/api/twilio/call", async (req: Request, res: Response) => {
-  const { to, from } = req.body;
+  const { to, from, agentName, agentScript } = req.body;
   if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
     res.status(500).json({ error: "Twilio credentials not configured" });
     return;
@@ -172,10 +178,28 @@ app.post("/api/twilio/call", async (req: Request, res: Response) => {
     res.status(400).json({ error: "Missing 'to' or 'from' phone number" });
     return;
   }
+  
   try {
     const client = new Twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+    
+    // Generate unique call ID
+    const callId = `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Store agent configuration for this call
+    if (agentName && agentScript) {
+      pendingCallConfigs.set(callId, {
+        name: agentName,
+        opening: agentScript.opening,
+        goal: agentScript.goal || "assist the customer",
+        tone: agentScript.tone || "Professional and friendly"
+      });
+      
+      // Clean up after 5 minutes if not used
+      setTimeout(() => pendingCallConfigs.delete(callId), 5 * 60 * 1000);
+    }
+    
     const call = await client.calls.create({
-      url: `${PUBLIC_URL}/twiml`,
+      url: `${PUBLIC_URL}/twiml?callId=${callId}`,
       to,
       from,
     });
@@ -486,13 +510,27 @@ app.post("/api/elevenlabs/tts", async (req: Request, res: Response) => {
 let currentCall: WebSocket | null = null;
 let currentLogs: WebSocket | null = null;
 
+// Store for pending call configurations
+const pendingCallConfigs = new Map<string, any>();
+
 wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
   const pathname = new URL(req.url || "/", `http://${req.headers.host}`).pathname;
   
   if (pathname === "/call") {
     if (currentCall) currentCall.close();
     currentCall = ws;
-    handleCallConnection(currentCall, OPENAI_API_KEY);
+    
+    // Try to get agent config from query params or use default
+    const url = new URL(req.url || "/", `http://${req.headers.host}`);
+    const callId = url.searchParams.get('callId');
+    const agentConfig = callId ? pendingCallConfigs.get(callId) : undefined;
+    
+    // Clean up after retrieving
+    if (callId) {
+      pendingCallConfigs.delete(callId);
+    }
+    
+    handleCallConnection(currentCall, OPENAI_API_KEY, agentConfig);
   } else if (pathname === "/logs") {
     if (currentLogs) currentLogs.close();
     currentLogs = ws;

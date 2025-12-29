@@ -11,14 +11,30 @@ interface Session {
   responseStartTimestamp?: number;
   latestMediaTimestamp?: number;
   openAIApiKey?: string;
+  agentConfig?: {
+    name: string;
+    opening: string;
+    goal?: string;
+    tone?: string;
+  };
 }
 
 let session: Session = {};
 
-export function handleCallConnection(ws: WebSocket, openAIApiKey: string) {
+export function handleCallConnection(
+  ws: WebSocket,
+  openAIApiKey: string,
+  agentConfig?: { name: string; opening: string; goal?: string; tone?: string }
+) {
   cleanupConnection(session.twilioConn);
   session.twilioConn = ws;
   session.openAIApiKey = openAIApiKey;
+  session.agentConfig = agentConfig || {
+    name: "AI Assistant",
+    opening: "Hello! How can I help you today?",
+    goal: "assist the customer",
+    tone: "Professional and friendly"
+  };
 
   ws.on("message", handleTwilioMessage);
   ws.on("error", ws.close);
@@ -132,6 +148,11 @@ function tryConnectModel() {
 
   session.modelConn.on("open", () => {
     const config = session.saved_config || {};
+    const agentName = session.agentConfig?.name || "AI Assistant";
+    const agentGoal = session.agentConfig?.goal || "assist the customer";
+    const agentTone = session.agentConfig?.tone || "Professional, friendly, and concise";
+    const agentOpening = session.agentConfig?.opening || `Hello! This is ${agentName}. How can I help you today?`;
+    
     jsonSend(session.modelConn, {
       type: "session.update",
       session: {
@@ -141,7 +162,7 @@ function tryConnectModel() {
         input_audio_transcription: { model: "whisper-1" },
         input_audio_format: "g711_ulaw",
         output_audio_format: "g711_ulaw",
-        instructions: "You are James from Voice Marketing AI. Your goal is to engage the customer and schedule a demo. Tone: Professional, friendly, and concise. Keep your responses short (under 2 sentences).",
+        instructions: `You are ${agentName}. Your goal is to ${agentGoal}. Tone: ${agentTone}. Keep your responses short (under 2 sentences).`,
         ...config,
       },
     });
@@ -151,7 +172,7 @@ function tryConnectModel() {
       type: "response.create",
       response: {
         modalities: ["text", "audio"],
-        instructions: "Please say exactly the following sentence: Hello! This is James from Voice Marketing AI. How are you doing today?",
+        instructions: `Please say exactly the following sentence: ${agentOpening}`,
       },
     });
   });

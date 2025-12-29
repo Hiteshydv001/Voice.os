@@ -89,8 +89,8 @@ const Dashboard: React.FC<DashboardProps> = ({ agents = [], logs = [], onAddLog 
         const callStartTime = Date.now();
         const callStartTimeISO = new Date().toISOString();
         
-        // Call the real Twilio Service
-        await makeOutboundCall(dialerNumber, agent.name);
+        // Call the real Twilio Service with agent script
+        await makeOutboundCall(dialerNumber, agent.name, agent.script);
         
         const callDuration = Math.floor((Date.now() - callStartTime) / 1000);
         

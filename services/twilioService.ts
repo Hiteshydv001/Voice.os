@@ -1,6 +1,14 @@
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8081';
 
-export const makeOutboundCall = async (to: string, agentName: string, _agentScript?: { opening: string; closing: string; objectionHandling: string }) => {
+const replaceAgentNameInScript = (script: string, agentName: string): string => {
+  // Replace any name in greeting patterns with the actual agent name
+  return script.replace(/(?:Hello|Hi|Hey),?\s+(?:this\s+is|I'm|I am)\s+[A-Z][a-z]+/gi, (match) => {
+    const greeting = match.split(/\s+(?:this\s+is|I'm|I am)\s+/i)[0];
+    return `${greeting} this is ${agentName}`;
+  });
+};
+
+export const makeOutboundCall = async (to: string, agentName: string, agentScript?: { opening: string; closing: string; objectionHandling: string }) => {
   // Check if Twilio is configured via backend
   try {
     const checkResponse = await fetch(`${BACKEND_URL}/api/twilio`);
@@ -26,11 +34,20 @@ export const makeOutboundCall = async (to: string, agentName: string, _agentScri
 
     const from = numbers[0].phoneNumber;
     
-    // Make call via backend
+    // Make call via backend with agent configuration
     const callResponse = await fetch(`${BACKEND_URL}/api/twilio/call`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to, from }),
+      body: JSON.stringify({ 
+        to, 
+        from,
+        agentName,
+        agentScript: agentScript ? {
+          opening: replaceAgentNameInScript(agentScript.opening, agentName),
+          goal: agentScript.objectionHandling || 'assist the customer',
+          tone: 'Professional and friendly'
+        } : undefined
+      }),
     });
 
     if (!callResponse.ok) {

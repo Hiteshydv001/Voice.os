@@ -30,9 +30,11 @@ const CallSimulator: React.FC<CallSimulatorProps> = ({ agent, onClose }) => {
       
       // Replace any placeholder name in the script with the actual agent name
       let greetingText = agent.script.opening;
-      // Replace common name placeholders or ensure agent name is used
-      greetingText = greetingText.replace(/Hello,?\s+this\s+is\s+\w+/i, `Hello, this is ${agent.name}`);
-      greetingText = greetingText.replace(/Hi,?\s+this\s+is\s+\w+/i, `Hi, this is ${agent.name}`);
+      // Replace common name placeholders with actual agent name - handles multiple patterns
+      greetingText = greetingText.replace(/(?:Hello|Hi|Hey),?\s+(?:this\s+is|I'm|I am)\s+[A-Z][a-z]+/gi, (match) => {
+        const greeting = match.split(/\s+(?:this\s+is|I'm|I am)\s+/i)[0];
+        return `${greeting} this is ${agent.name}`;
+      });
       
       const initialMsg: ChatMessage = {
         role: 'agent',

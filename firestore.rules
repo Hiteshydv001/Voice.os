@@ -48,6 +48,15 @@ service cloud.firestore {
                                resource.data.userId == request.auth.uid;
     }
     
+    // Call history - users can read/write their own call records
+    match /call_history/{callId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && 
+                       request.resource.data.userId == request.auth.uid;
+      allow update, delete: if request.auth != null && 
+                               resource.data.userId == request.auth.uid;
+    }
+    
     // Default deny all other access
     match /{document=**} {
       allow read, write: if false;

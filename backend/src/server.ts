@@ -617,28 +617,36 @@ let currentLogs: WebSocket | null = null;
 const pendingCallConfigs = new Map<string, any>();
 
 wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
-  const pathname = new URL(req.url || "/", `http://${req.headers.host}`).pathname;
+  const fullUrl = req.url || "/";
+  console.log(`🔌 WebSocket connection request URL: ${fullUrl}`);
   
-  if (pathname === "/call") {
+  const pathname = new URL(fullUrl, `http://${req.headers.host}`).pathname;
+  
+  if (pathname === "/call" || fullUrl.startsWith("/call")) {
     if (currentCall) currentCall.close();
     currentCall = ws;
     
-    // Try to get agent config from query params or use default
-    const url = new URL(req.url || "/", `http://${req.headers.host}`);
-    const callId = url.searchParams.get('callId');
+    // Parse callId from query params (e.g., /call?callId=xyz)
+    let callId: string | null = null;
+    try {
+      const url = new URL(fullUrl, `http://${req.headers.host}`);
+      callId = url.searchParams.get('callId');
+    } catch (e) {
+      // Fallback: parse manually if URL parsing fails
+      const match = fullUrl.match(/[?&]callId=([^&]+)/);
+      if (match) callId = match[1];
+    }
+    
     console.log(`🔌 WebSocket connected. CallId: ${callId}`);
     
     const agentConfig = callId ? pendingCallConfigs.get(callId) : undefined;
     
     if (agentConfig) {
-      console.log(`✅ Retrieved agent config for callId ${callId}:`, agentConfig);
+      console.log(`✅ Retrieved agent config for callId ${callId}:`, JSON.stringify(agentConfig));
+      // Clean up after retrieving
+      if (callId) pendingCallConfigs.delete(callId);
     } else {
       console.warn(`⚠️ No agent config found for callId ${callId}. Using defaults.`);
-    }
-    
-    // Clean up after retrieving
-    if (callId) {
-      pendingCallConfigs.delete(callId);
     }
     
     handleCallConnection(currentCall, OPENAI_API_KEY, agentConfig);

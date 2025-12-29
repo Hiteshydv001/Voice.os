@@ -17,8 +17,10 @@ export const generateAgentScript = async (
     - Product: ${product}
     - Goal: ${goal}
 
+    IMPORTANT: The agent must introduce itself with its exact name "${name}" in the opening line.
+
     Return a JSON object containing:
-    - "opening": A natural, short opening line (under 2 sentences).
+    - "opening": A natural, short opening line (under 2 sentences). MUST start with "Hi, this is ${name}" or "Hello, this is ${name}".
     - "objectionHandling": A strategy or line to handle common objections.
     - "closing": A strong closing line to achieve the goal.
   `;

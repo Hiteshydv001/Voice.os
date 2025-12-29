@@ -27,13 +27,20 @@ const CallSimulator: React.FC<CallSimulatorProps> = ({ agent, onClose }) => {
     const startCall = async () => {
       await new Promise(resolve => setTimeout(resolve, 1000));
       setStatus('CONNECTED');
+      
+      // Replace any placeholder name in the script with the actual agent name
+      let greetingText = agent.script.opening;
+      // Replace common name placeholders or ensure agent name is used
+      greetingText = greetingText.replace(/Hello,?\s+this\s+is\s+\w+/i, `Hello, this is ${agent.name}`);
+      greetingText = greetingText.replace(/Hi,?\s+this\s+is\s+\w+/i, `Hi, this is ${agent.name}`);
+      
       const initialMsg: ChatMessage = {
         role: 'agent',
-        text: agent.script.opening,
+        text: greetingText,
         timestamp: Date.now()
       };
       setMessages([initialMsg]);
-      speak(initialMsg.text);
+      speak(greetingText);
     };
     startCall();
     

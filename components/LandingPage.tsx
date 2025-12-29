@@ -93,7 +93,7 @@ const LandingPage: React.FC = () => {
                 <div className="space-y-2 text-green-500 font-mono text-sm opacity-80">
                     <p>{'>'} INITIATING NEURAL LINK...</p>
                     <p>{'>'} CONNECTING TO TWILIO GATEWAY... [OK]</p>
-                    <p>{'>'} LOADING AGENT MODEL [GEMINI-2.0-FLASH]...</p>
+                    <p>{'>'} LOADING AGENT MODEL [GEMINI-1.5-FLASH]...</p>
                     <p>{'>'} SYNTHESIZING VOICE PATTERNS...</p>
                     <p className="text-white animate-pulse">{'>'} READY FOR DEPLOYMENT_</p>
                 </div>

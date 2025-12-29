@@ -144,22 +144,35 @@ app.post("/twiml", (req, res) => {
       res.status(500).send("PUBLIC_URL environment variable is not configured");
       return;
     }
+    
+    // Get CallSid from Twilio request
+    const twilioCallSid = req.query.CallSid as string || req.body?.CallSid;
+    const callId = req.query.callId as string || (twilioCallSid ? callSidToCallId.get(twilioCallSid) : undefined);
+    
+    console.log(`📞 TwiML request received (POST). Twilio CallSid: ${twilioCallSid}, Our callId: ${callId}`);
+    
     const wsUrl = new URL(PUBLIC_URL);
     wsUrl.protocol = "wss:";
     wsUrl.pathname = `/call`;
-    
-    // Get callId from query params if present
-    const callId = req.query.callId as string;
-    console.log(`📞 TwiML request received (POST). CallId: ${callId}`);
+
     if (callId) {
-      wsUrl.searchParams.set('callId', callId);
-      console.log(`🔗 WebSocket URL with callId:`, wsUrl.toString());
-    } else {
-      console.warn(`⚠️ No callId in TwiML request query params`);
+      console.log(`🔗 Building WebSocket URL for callId: ${callId}`);
     }
 
-    const twimlContent = twimlTemplate.replace("{{WS_URL}}", wsUrl.toString());
-    res.type("text/xml").send(twimlContent);
+    // Build TwiML with Stream parameters - pass callId via custom parameter
+    const twimlWithParams = callId 
+      ? `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say>Connected</Say>
+  <Connect>
+    <Stream url="${wsUrl.toString()}">
+      <Parameter name="callId" value="${callId}" />
+    </Stream>
+  </Connect>
+  <Say>Disconnected</Say>
+</Response>`
+      : twimlTemplate.replace("{{WS_URL}}", wsUrl.toString());
+    res.type("text/xml").send(twimlWithParams);
   } catch (error) {
     console.error("Error generating TwiML:", error);
     res.status(500).send("Error generating TwiML");

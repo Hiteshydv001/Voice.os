@@ -28,15 +28,6 @@ interface TextToSpeechResponse {
   error?: string;
 }
 
-interface Voice {
-  voice_id: string;
-  name: string;
-  language: string;
-  gender: string;
-  category: string;
-  description?: string;
-}
-
 /**
  * Convert text to speech using Minimax
  */

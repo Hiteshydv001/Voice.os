@@ -14,7 +14,9 @@ const replaceAgentNameInScript = (script: string, agentName: string): string => 
 export const makeOutboundCall = async (to: string, agent: Agent) => {
   // Check if Twilio is configured via backend
   try {
-    const checkResponse = await fetch(`${BACKEND_URL}/api/twilio`);
+    const checkResponse = await fetch(`${BACKEND_URL}/api/twilio`, {
+      headers: { 'ngrok-skip-browser-warning': 'true' }
+    });
     const { credentialsSet } = await checkResponse.json();
     
     if (!credentialsSet) {
@@ -28,7 +30,9 @@ export const makeOutboundCall = async (to: string, agent: Agent) => {
 
   // Get phone numbers from backend
   try {
-    const numbersResponse = await fetch(`${BACKEND_URL}/api/twilio/numbers`);
+    const numbersResponse = await fetch(`${BACKEND_URL}/api/twilio/numbers`, {
+      headers: { 'ngrok-skip-browser-warning': 'true' }
+    });
     const { numbers} = await numbersResponse.json();
     
     if (!numbers || numbers.length === 0) {
@@ -51,12 +55,8 @@ export const makeOutboundCall = async (to: string, agent: Agent) => {
     
     const callResponse = await fetch(`${BACKEND_URL}/api/twilio/call`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        to, 
-        from,
-        ...agentConfig
-      }),
+      headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+      body: JSON.stringify({ to, from }),
     });
 
     if (!callResponse.ok) {
@@ -92,8 +92,12 @@ async function simulateCall(to: string, agentName: string) {
     console.log('✅ Simulated call successful');
     return {
       callSid: `CALL_SIM_${Date.now()}`,
+      sid: `CALL_SIM_${Date.now()}`,
       callId: `sim_${Date.now()}`,
-      status: 'completed'
+      status: 'completed',
+      to: to,
+      from: 'Simulated',
+      duration: Math.floor(callDuration / 1000)
     };
   } else {
     console.log('❌ Simulated call failed');

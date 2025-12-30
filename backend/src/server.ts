@@ -11,7 +11,7 @@ import {
   handleCallConnection,
   handleFrontendConnection,
 } from "./sessionManager";
-import functions from "./functionHandlers";
+import functions, { scheduledDemos } from "./functionHandlers";
 
 dotenv.config();
 
@@ -343,6 +343,28 @@ app.get("/api/twilio/recording/:callSid", async (req: Request, res: Response) =>
     console.error("Error fetching recording:", error);
     res.status(500).json({ error: error.message });
   }
+});
+
+// Demos API
+app.get('/api/demos', (req, res) => {
+  res.json({ demos: scheduledDemos });
+});
+
+app.put('/api/demos/:id', (req: Request, res: Response) => {
+  const id = req.params.id;
+  const demo = scheduledDemos.find(d => d.id === id);
+  if (!demo) return res.status(404).json({ error: 'Demo not found' });
+  const { status } = req.body;
+  if (status) demo.status = status;
+  res.json({ success: true });
+});
+
+app.delete('/api/demos/:id', (req: Request, res: Response) => {
+  const id = req.params.id;
+  const idx = scheduledDemos.findIndex(d => d.id === id);
+  if (idx === -1) return res.status(404).json({ error: 'Demo not found' });
+  scheduledDemos.splice(idx, 1);
+  res.json({ success: true });
 });
 
 // ============= Deepgram STT Proxy =============

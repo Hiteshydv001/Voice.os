@@ -1,12 +1,13 @@
 import React from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LayoutDashboard, Users, PhoneOutgoing, Bot, Settings, LogOut, Menu, Terminal, Mic, Network, Phone } from 'lucide-react';
+import { LayoutDashboard, Users, PhoneOutgoing, Bot, Settings, LogOut, Menu, Terminal, Mic, Network, X, Calendar, Phone } from 'lucide-react';
 
 const Layout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const { logout, currentUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = async () => {
     try {
@@ -18,14 +19,18 @@ const Layout: React.FC = () => {
   };
 
   const navItems = [
-    { icon: LayoutDashboard, label: 'DASHBOARD', path: '/app/dashboard' },
-    { icon: Bot, label: 'AGENTS', path: '/app/agents' },
-    { icon: Mic, label: 'TEXT-TO-SPEECH', path: '/app/voice-cloning', featured: true },
-    { icon: Network, label: 'FLOW BUILDER', path: '/app/visual-builder' },
-    { icon: Users, label: 'LEADS', path: '/app/leads' },
-    { icon: PhoneOutgoing, label: 'CAMPAIGNS', path: '/app/campaigns' },
-    { icon: Phone, label: 'CALL HISTORY', path: '/app/call-history', featured: true },
+    { icon: LayoutDashboard, label: 'DASHBOARD', path: '/app/dashboard', shortLabel: 'HOME' },
+    { icon: Bot, label: 'AGENTS', path: '/app/agents', shortLabel: 'AGENTS' },
+    { icon: Mic, label: 'TEXT-TO-SPEECH', path: '/app/voice-cloning', featured: true, shortLabel: 'TTS' },
+    { icon: Network, label: 'FLOW BUILDER', path: '/app/visual-builder', shortLabel: 'FLOW' },
+    { icon: Users, label: 'LEADS', path: '/app/leads', shortLabel: 'LEADS' },
+    { icon: PhoneOutgoing, label: 'CAMPAIGNS', path: '/app/campaigns', shortLabel: 'CALLS' },
+    { icon: Calendar, label: 'DEMO SCHEDULE', path: '/app/demos', featured: true, shortLabel: 'DEMOS' },
   ];
+
+
+  // Show only first 4 items in bottom nav
+  const bottomNavItems = navItems.slice(0, 4);
 
   return (
     <div className="flex h-screen bg-stone-100 overflow-hidden font-mono">
@@ -129,6 +134,30 @@ const Layout: React.FC = () => {
         <div className="flex-1 overflow-y-auto p-4 lg:p-8 relative z-10">
           <Outlet />
         </div>
+
+        {/* Bottom Navigation - Mobile Only */}
+        <nav className="fixed bottom-0 left-0 right-0 bg-black border-t-4 border-orange-600 lg:hidden z-40">
+          <div className="flex items-center justify-around h-16">
+            {bottomNavItems.map((item) => {
+              const isActive = location.pathname === item.path;
+              return (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  className={`flex flex-col items-center justify-center flex-1 h-full transition-colors relative
+                    ${isActive ? 'bg-orange-600 text-white' : 'text-stone-400 hover:text-white hover:bg-stone-800'}
+                  `}
+                >
+                  <item.icon className="h-5 w-5 mb-1" />
+                  <span className="text-[10px] font-bold tracking-wider">{item.shortLabel}</span>
+                  {item.featured && isActive && (
+                    <div className="absolute top-1 right-1 w-2 h-2 bg-white rounded-full" />
+                  )}
+                </NavLink>
+              );
+            })}
+          </div>
+        </nav>
       </main>
     </div>
   );

@@ -20,7 +20,7 @@ export const generateAgentScript = async (
     IMPORTANT: The agent must introduce itself with its exact name "${name}" in the opening line.
 
     Return a JSON object containing:
-    - "opening": A natural, short opening line (under 2 sentences). MUST start with "Hi, this is ${name}" or "Hello, this is ${name}".
+    - "opening": A natural, short opening line (under 2 sentences).
     - "objectionHandling": A strategy or line to handle common objections.
     - "closing": A strong closing line to achieve the goal.
   `;
@@ -28,7 +28,7 @@ export const generateAgentScript = async (
   try {
     const response = await fetch(`${BACKEND_URL}/api/gemini/generate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
       body: JSON.stringify({ prompt }),
     });
 
@@ -87,7 +87,7 @@ export const chatWithAgent = async (
   try {
     const response = await fetch(`${BACKEND_URL}/api/gemini/generate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
       body: JSON.stringify({ prompt: fullPrompt }),
     });
 

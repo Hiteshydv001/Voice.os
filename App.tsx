@@ -17,11 +17,13 @@ import CallSimulator from './components/CallSimulator';
 import SubscriptionModal from './components/SubscriptionModal';
 import PaymentSuccess from './components/PaymentSuccess';
 import VoiceCloning from './components/VoiceCloning';
+import DemoSchedule from './components/DemoSchedule';
 import { storage } from './services/storageService';
 import { makeOutboundCall } from './services/twilioService';
 import { deductCredits } from './services/userService';
 import { Agent, Campaign, Lead, ActivityLog, CallHistoryRecord } from './types';
 import { Phone, Edit, Bot } from 'lucide-react';
+import { useCustomAlert } from './components/ui/custom-alert';
 
 // Suppress ResizeObserver warnings globally (known React Flow issue)
 if (typeof window !== 'undefined') {
@@ -35,6 +37,7 @@ if (typeof window !== 'undefined') {
 
 const AppContent: React.FC = () => {
   const { currentUser, userProfile, refreshProfile } = useAuth();
+  const { showAlert, AlertComponent } = useCustomAlert();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -79,7 +82,7 @@ const AppContent: React.FC = () => {
   const handleSaveAgent = (agent: Agent) => {
     if (!currentUser) {
       console.error('Cannot save agent: No current user');
-      alert('Error: You must be logged in to save agents');
+      showAlert('Error: You must be logged in to save agents', { type: 'error' });
       return;
     }
     
@@ -95,12 +98,12 @@ const AppContent: React.FC = () => {
         updatedAgents = [...prevAgents];
         updatedAgents[existingIndex] = agent;
         console.log('Updated existing agent at index:', existingIndex);
-        alert('Agent updated successfully!');
+        showAlert('Agent updated successfully!', { type: 'success' });
       } else {
         // Create new
         updatedAgents = [agent, ...prevAgents];
         console.log('Created new agent. Total agents:', updatedAgents.length);
-        alert('Agent created successfully!');
+        showAlert('Agent created successfully!', { type: 'success' });
       }
       
       console.log('Saving to storage:', updatedAgents);
@@ -180,12 +183,12 @@ const AppContent: React.FC = () => {
     const agent = agents.find(a => a.id === campaign.agentId);
 
     if (!agent) {
-        alert("Error: Agent not found for this campaign.");
+        showAlert("Error: Agent not found for this campaign.", { type: 'error' });
         return;
     }
 
     if (targetLeads.length === 0) {
-        alert("No leads available to call. Please upload leads first.");
+        showAlert("No leads available to call. Please upload leads first.", { type: 'warning' });
         return;
     }
 
@@ -202,62 +205,58 @@ const AppContent: React.FC = () => {
         return;
     }
 
-    // Warn if they don't have enough for the WHOLE campaign, but let them start
-    if (currentCredits < totalCost) {
-        const confirmStart = window.confirm(`Warning: You have ${currentCredits} credits, but this campaign requires ${totalCost}. Calls will stop when credits run out. Continue?`);
-        if (!confirmStart) return;
-    }
+    async function continueCampaign() {
+      // 3. Save Campaign
+      const activeCampaign = { 
+        ...campaign, 
+        leadsCount: targetLeads.length, 
+        status: 'Active' as const,
+        callResults: [],
+        startedAt: new Date().toISOString()
+      };
+      const updatedCampaigns = [activeCampaign, ...campaigns];
+      setCampaigns(updatedCampaigns);
+      storage.saveCampaigns(currentUser.uid, updatedCampaigns);
 
-    // 3. Save Campaign
-    const activeCampaign = { 
-      ...campaign, 
-      leadsCount: targetLeads.length, 
-      status: 'Active' as const,
-      callResults: [],
-      startedAt: new Date().toISOString()
-    };
-    const updatedCampaigns = [activeCampaign, ...campaigns];
-    setCampaigns(updatedCampaigns);
-    storage.saveCampaigns(currentUser.uid, updatedCampaigns);
+      // Log activity
+      handleAddLog({
+        id: `log_${Date.now()}`,
+        action: 'Campaign Started',
+        timestamp: new Date().toISOString(),
+        details: `Started campaign "${campaign.name}" with ${targetLeads.length} leads`
+      });
 
-    // Log activity
-    handleAddLog({
-      id: `log_${Date.now()}`,
-      action: 'Campaign Started',
-      timestamp: new Date().toISOString(),
-      details: `Started campaign "${campaign.name}" with ${targetLeads.length} leads`
-    });
+      showAlert(`Campaign Initialized. Starting calls for ${targetLeads.length} leads...`, { type: 'info' });
 
-    alert(`Campaign Initialized. Starting calls for ${targetLeads.length} leads...`);
+      // 4. Async Loop to process calls
+      async function processCalls() {
+        for (let i = 0; i < targetLeads.length; i++) {
+            // Re-check credits before EACH call in case they run out mid-campaign
+            await refreshProfile(); 
+            
+            const lead = targetLeads[i];
 
-    // 4. Async Loop to process calls
-    for (let i = 0; i < targetLeads.length; i++) {
-        // Re-check credits before EACH call in case they run out mid-campaign
-        await refreshProfile(); 
-        
-        const lead = targetLeads[i];
+            // Update Campaign Progress in UI with current results
+            setCampaigns(prev => {
+                const current = prev.map(c => 
+                    c.id === campaign.id 
+                    ? { 
+                        ...c, 
+                        callsMade: i + 1, 
+                        progress: Math.round(((i + 1) / targetLeads.length) * 100),
+                        callResults: [...callResults] // Update with current results
+                      } 
+                    : c
+                );
+                if (currentUser) storage.saveCampaigns(currentUser.uid, current);
+                return current;
+            });
 
-        // Update Campaign Progress in UI with current results
-        setCampaigns(prev => {
-            const current = prev.map(c => 
-                c.id === campaign.id 
-                ? { 
-                    ...c, 
-                    callsMade: i + 1, 
-                    progress: Math.round(((i + 1) / targetLeads.length) * 100),
-                    callResults: [...callResults] // Update with current results
-                  } 
-                : c
-            );
-            storage.saveCampaigns(currentUser.uid, current);
-            return current;
-        });
-
-        // Add "Dialing" Log
-        handleAddLog({
-            id: Date.now(),
-            phone: lead.phone,
-            status: 'Dialing...',
+            // Add "Dialing" Log
+            handleAddLog({
+                id: Date.now(),
+                phone: lead.phone,
+                status: 'Dialing...',
             time: new Date().toLocaleTimeString(),
             agentName: agent.name
         });
@@ -345,16 +344,16 @@ const AppContent: React.FC = () => {
             // Show helpful error message
             if (i === 0) {
                 if (error.message.includes('21219') || error.message.includes('unverified')) {
-                    alert(`❌ Phone Number Not Verified!\n\n` +
+                    showAlert(`❌ Phone Number Not Verified!\n\n` +
                           `Twilio trial accounts require verification.\n\n` +
                           `To verify ${lead.phone}:\n` +
                           `1. Go to: https://console.twilio.com/us1/develop/phone-numbers/manage/verified\n` +
                           `2. Click "Verify a new number"\n` +
                           `3. Enter: ${lead.phone}\n` +
                           `4. Enter the verification code you receive\n\n` +
-                          `Or upgrade to a paid Twilio account to call any number.`);
+                          `Or upgrade to a paid Twilio account to call any number.`, { type: 'error' });
                 } else {
-                    alert(`First call failed: ${error.message}\n\nCheck console for details.`);
+                    showAlert(`First call failed: ${error.message}\n\nCheck console for details.`, { type: 'error' });
                 }
             }
             
@@ -400,7 +399,7 @@ const AppContent: React.FC = () => {
         return current;
     });
 
-    alert(`Campaign Completed! ${callResults.filter(r => r.status === 'Success').length} successful calls out of ${callResults.length} attempts.`);
+    showAlert(`Campaign Completed! ${callResults.filter(r => r.status === 'Success').length} successful calls out of ${callResults.length} attempts.`, { type: 'success' });
   };
 
   return (
@@ -519,12 +518,18 @@ const AppContent: React.FC = () => {
             element={<VoiceCloning />} 
           />
           <Route 
+            path="demos" 
+            element={<DemoSchedule />} 
+          />
+          <Route 
             path="visual-builder" 
             element={<AgentBuilderPage />} 
           />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      {/* Custom Alert */}
+      <AlertComponent />
     </>
   );
 };

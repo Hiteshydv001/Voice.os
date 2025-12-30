@@ -20,10 +20,17 @@ export function TestRunnerModal({ isOpen, onClose, nodes, edges, flowName }: Tes
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const showCustomAlert = (message: string) => {
+    setAlertMessage(message);
+    setShowAlert(true);
+  };
 
   if (!isOpen) return null;
 
@@ -69,7 +76,7 @@ export function TestRunnerModal({ isOpen, onClose, nodes, edges, flowName }: Tes
 
     } catch (error) {
       console.error('Failed to start recording:', error);
-      alert('Failed to access microphone. Please check permissions.');
+      showCustomAlert('Failed to access microphone. Please check permissions.');
     }
   };
 
@@ -93,13 +100,13 @@ export function TestRunnerModal({ isOpen, onClose, nodes, edges, flowName }: Tes
 
   const handleRunTest = async () => {
     if (!testInput && !audioFile) {
-      alert('Please provide test input (text or audio file)');
+      showCustomAlert('Please provide test input (text or audio file)');
       return;
     }
 
     // Validate flow
     if (nodes.length === 0) {
-      alert('Flow is empty. Add nodes first.');
+      showCustomAlert('Flow is empty. Add nodes first.');
       return;
     }
 
@@ -107,7 +114,7 @@ export function TestRunnerModal({ isOpen, onClose, nodes, edges, flowName }: Tes
     const hasEnd = nodes.some(n => n.type === 'end');
     
     if (!hasStart || !hasEnd) {
-      alert('Flow must have both Start and End nodes');
+      showCustomAlert('Flow must have both Start and End nodes');
       return;
     }
 

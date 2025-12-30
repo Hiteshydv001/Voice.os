@@ -9,13 +9,15 @@ import { AgentNodeType, NodeConfig, AgentFlow } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { saveAgentFlow, createNewFlow, loadUserFlows } from '../../services/agentFlowService';
 import { agentTemplates } from './templates';
-import { Layers, Plus, Loader2, Play, Download, Upload, Key, Trash2 } from 'lucide-react';
+import { Layers, Plus, Loader2, Play, Download, Upload, Key, Trash2, X, AlertTriangle, AlertCircle } from 'lucide-react';
+import { useCustomAlert } from '../ui/custom-alert';
 
 let nodeIdCounter = 1;
 
 const AgentBuilderContent: React.FC = () => {
   const reactFlowInstance = useReactFlow();
   const { currentUser } = useAuth();
+  const { showAlert, AlertComponent } = useCustomAlert();
   const [nodes, setNodes] = useState<Node[]>([
     {
       id: 'start-1',
@@ -162,7 +164,7 @@ const AgentBuilderContent: React.FC = () => {
     const selectedEdgeIds = edges.filter(e => e.selected).map(e => e.id);
     
     if (selectedNodeIds.length === 0 && selectedEdgeIds.length === 0) {
-      alert('No nodes or connections selected. Click on a node or edge to select it, then click Delete.');
+      showAlert('No nodes or connections selected. Click on a node or edge to select it, then click Delete.', { type: 'warning' });
       return;
     }
 
@@ -173,7 +175,7 @@ const AgentBuilderContent: React.FC = () => {
       selectedEdgeIds
     });
     setShowDeleteDialog(true);
-  }, [nodes, edges]);
+  }, [nodes, edges, showAlert]);
 
   const handleConfirmDelete = useCallback(() => {
     if (!deleteDialogData) return;
@@ -211,21 +213,21 @@ const AgentBuilderContent: React.FC = () => {
 
   const handleSaveFlow = useCallback(async () => {
     if (!currentUser) {
-      alert('Please login to save flows');
+      showAlert('Please login to save flows', { type: 'warning' });
       return;
     }
 
     // Show dialog to ask for name
     setSaveFlowName(flowName);
     setShowSaveDialog(true);
-  }, [currentUser, flowName]);
+  }, [currentUser, flowName, showAlert]);
 
   const handleConfirmSave = useCallback(async () => {
     if (!currentUser) return;
     
     const name = saveFlowName.trim();
     if (!name) {
-      alert('Please enter a flow name');
+      showAlert('Please enter a flow name', { type: 'warning' });
       return;
     }
 
@@ -257,22 +259,22 @@ const AgentBuilderContent: React.FC = () => {
       const flows = await loadUserFlows(currentUser.uid);
       setUserFlows(flows);
       
-      alert('Flow saved successfully!');
+      showAlert('Flow saved successfully!', { type: 'success' });
     } catch (error: any) {
       console.error('Save failed:', error);
-      alert(`Failed to save flow: ${error.message || 'Unknown error'}`);
+      showAlert(`Failed to save flow: ${error.message || 'Unknown error'}`, { type: 'error' });
     } finally {
       setSaving(false);
     }
-  }, [currentUser, currentFlowId, saveFlowName, nodes, edges, userFlows]);
+  }, [currentUser, currentFlowId, saveFlowName, nodes, edges, userFlows, showAlert]);
 
   const handleLoadFlow = useCallback((flow: AgentFlow) => {
     setNodes(flow.nodes);
     setEdges(flow.edges);
     setCurrentFlowId(flow.id);
     setFlowName(flow.name);
-    alert(`Loaded flow: ${flow.name}`);
-  }, [setNodes, setEdges]);
+    showAlert(`Loaded flow: ${flow.name}`, { type: 'success' });
+  }, [setNodes, setEdges, showAlert]);
 
   const handleNewFlow = useCallback(() => {
     setShowNewFlowDialog(true);
@@ -309,8 +311,8 @@ const AgentBuilderContent: React.FC = () => {
     setShowTemplates(false);
     setShowConfirmDialog(false);
     setConfirmDialogData(null);
-    alert(`Template "${template.name}" loaded successfully!`);
-  }, [confirmDialogData, setNodes, setEdges]);
+    showAlert(`Template "${template.name}" loaded successfully!`, { type: 'success' });
+  }, [confirmDialogData, setNodes, setEdges, showAlert]);
 
   const handleTestFlow = useCallback(() => {
     setShowTestRunner(true);
@@ -353,16 +355,16 @@ const AgentBuilderContent: React.FC = () => {
           setNodes(imported.nodes);
           setEdges(imported.edges);
           setCurrentFlowId(null); // Treat as new flow
-          alert(`Flow "${imported.name}" imported successfully!`);
+          showAlert(`Flow "${imported.name}" imported successfully!`, { type: 'success' });
         } catch (error) {
-          alert('Failed to import flow. Invalid file format.');
+          showAlert('Failed to import flow. Invalid file format.', { type: 'error' });
         }
       };
       reader.readAsText(file);
       // Reset input
       event.target.value = '';
     },
-    [setNodes, setEdges]
+    [setNodes, setEdges, showAlert]
   );
 
   return (
@@ -476,32 +478,34 @@ const AgentBuilderContent: React.FC = () => {
 
       {/* Templates Modal */}
       {showTemplates && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white border-4 border-black max-w-4xl w-full max-h-[80vh] overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
-            <div className="flex items-center justify-between p-4 border-b-4 border-black bg-stone-900">
-              <h2 className="text-lg font-bold text-white uppercase font-mono">Agent Templates</h2>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 font-mono">
+          <div className="bg-white border-4 border-black max-w-4xl w-full max-h-[80vh] overflow-hidden shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
+            <div className="flex items-center justify-between px-6 py-4 border-b-4 border-black bg-[#0c0c0c]">
+              <h2 className="text-xl font-bold text-white uppercase tracking-wider">Agent Templates</h2>
               <button
                 onClick={() => setShowTemplates(false)}
-                className="text-white hover:text-orange-400 transition-colors"
+                className="text-white hover:text-orange-500 transition-colors"
               >
-                ✕
+                <X size={24} />
               </button>
             </div>
-            <div className="p-6 overflow-y-auto max-h-[calc(80vh-80px)]">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-8 overflow-y-auto max-h-[calc(80vh-80px)] bg-stone-100">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {agentTemplates.map(template => (
                   <div
                     key={template.id}
-                    className="border-2 border-black p-4 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer"
+                    className="group bg-white border-2 border-black p-6 hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer hover:-translate-y-1 active:translate-y-0 active:shadow-none relative"
                     onClick={() => handleLoadTemplate(template.id)}
                   >
-                    <h3 className="font-bold text-lg uppercase mb-2 font-mono">{template.name}</h3>
-                    <p className="text-sm text-stone-600 mb-3">{template.description}</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs px-2 py-1 bg-black text-white uppercase font-mono">
+                    <h3 className="font-black text-lg uppercase mb-4 tracking-wide">{template.name}</h3>
+                    <p className="text-stone-600 text-sm mb-8 leading-relaxed min-h-[40px]">
+                      {template.description}
+                    </p>
+                    <div className="flex items-center justify-between mt-auto">
+                      <span className="text-xs font-bold px-3 py-1.5 bg-black text-white uppercase tracking-wider">
                         {template.category}
                       </span>
-                      <span className="text-xs text-stone-500">
+                      <span className="text-xs text-stone-500 font-bold uppercase tracking-wider">
                         {template.flow.nodes.length} nodes
                       </span>
                     </div>
@@ -512,25 +516,28 @@ const AgentBuilderContent: React.FC = () => {
               {/* User's Saved Flows */}
               {userFlows.length > 0 && (
                 <>
-                  <div className="border-t-4 border-black mt-6 pt-6">
-                    <h3 className="font-bold text-lg uppercase mb-4 font-mono">Your Saved Flows</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="border-t-4 border-black mt-8 pt-8">
+                    <h3 className="font-black text-xl uppercase mb-6 tracking-wider">Your Saved Flows</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {userFlows.map(flow => (
                         <div
                           key={flow.id}
-                          className="border-2 border-black p-4 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer bg-stone-50"
+                          className="group bg-white border-2 border-black p-6 hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer hover:-translate-y-1 active:translate-y-0 active:shadow-none"
                           onClick={() => {
                             handleLoadFlow(flow);
                             setShowTemplates(false);
                           }}
                         >
-                          <h3 className="font-bold text-lg uppercase mb-2 font-mono">{flow.name}</h3>
-                          <p className="text-xs text-stone-500 mb-2">
+                          <h3 className="font-black text-lg uppercase mb-2 tracking-wide">{flow.name}</h3>
+                          <p className="text-xs text-stone-500 mb-6 font-bold uppercase tracking-wider">
                             Updated: {new Date(flow.metadata?.updatedAt || '').toLocaleDateString()}
                           </p>
                           <div className="flex items-center justify-between">
-                            <span className="text-xs text-stone-600">
-                              {flow.nodes.length} nodes • {flow.edges.length} connections
+                            <span className="text-xs font-bold px-3 py-1.5 bg-stone-200 text-stone-600 uppercase tracking-wider group-hover:bg-black group-hover:text-white transition-colors">
+                              Saved Flow
+                            </span>
+                            <span className="text-xs text-stone-500 font-bold uppercase tracking-wider">
+                              {flow.nodes.length} nodes
                             </span>
                           </div>
                         </div>
@@ -598,32 +605,38 @@ const AgentBuilderContent: React.FC = () => {
 
       {/* New Flow Confirmation Dialog */}
       {showNewFlowDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[60]">
-          <div className="bg-stone-900 border-2 border-orange-600 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl">
-            <div className="mb-5">
-              <h3 className="text-xl font-bold text-white mb-2 font-mono uppercase">
-                Create New Flow
-              </h3>
-              <p className="text-stone-300 leading-relaxed">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] font-mono">
+          <div className="relative bg-white border-4 border-black max-w-md w-full mx-4 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] antialiased">
+            <div className="flex items-center px-6 py-4 border-b-4 border-black bg-[#FFEBB0]">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-6 h-6 text-black" strokeWidth={3} />
+                <h3 className="text-xl font-bold uppercase tracking-wide text-black">
+                  Create New Flow
+                </h3>
+              </div>
+            </div>
+            
+            <div className="p-10 text-center">
+              <p className="text-black text-lg font-bold uppercase tracking-wide leading-relaxed">
                 Creating a new flow will clear your current work.
               </p>
-              <p className="text-stone-400 text-sm mt-2">
+              <p className="text-black text-sm font-bold uppercase tracking-wide mt-2 opacity-60">
                 Unsaved changes will be lost.
               </p>
             </div>
             
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => setShowNewFlowDialog(false)}
-                className="px-5 py-2.5 bg-stone-800 hover:bg-stone-700 text-white rounded font-medium transition-colors border border-stone-700"
-              >
-                Cancel
-              </button>
+            <div className="px-8 pb-8 pt-0 flex flex-col gap-3">
               <button
                 onClick={handleConfirmNewFlow}
-                className="px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded font-medium transition-colors shadow-lg shadow-orange-900/50"
+                className="w-full py-4 bg-black text-white text-lg font-bold uppercase tracking-widest hover:bg-stone-800 transition-colors shadow-none transform active:translate-y-1"
               >
                 Create New Flow
+              </button>
+              <button
+                onClick={() => setShowNewFlowDialog(false)}
+                className="w-full py-4 bg-white text-black border-4 border-black text-lg font-bold uppercase tracking-widest hover:bg-stone-100 transition-colors"
+              >
+                Cancel
               </button>
             </div>
           </div>
@@ -632,35 +645,41 @@ const AgentBuilderContent: React.FC = () => {
 
       {/* Delete Confirmation Dialog */}
       {showDeleteDialog && deleteDialogData && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[60]">
-          <div className="bg-stone-900 border-2 border-red-600 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl">
-            <div className="mb-5">
-              <h3 className="text-xl font-bold text-white mb-2 font-mono uppercase">
-                Delete Selected
-              </h3>
-              <p className="text-stone-300 leading-relaxed">
-                Delete <span className="text-red-500 font-semibold">{deleteDialogData.nodeCount} node(s)</span> and <span className="text-red-500 font-semibold">{deleteDialogData.edgeCount} connection(s)</span>?
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] font-mono">
+          <div className="relative bg-white border-4 border-black max-w-md w-full mx-4 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] antialiased">
+            <div className="flex items-center px-6 py-4 border-b-4 border-black bg-[#FFB0B0]">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="w-6 h-6 text-black" strokeWidth={3} />
+                <h3 className="text-xl font-bold uppercase tracking-wide text-black">
+                  Delete Selected
+                </h3>
+              </div>
+            </div>
+            
+            <div className="p-10 text-center">
+              <p className="text-black text-lg font-bold uppercase tracking-wide leading-relaxed">
+                Delete <span className="text-red-600">{deleteDialogData.nodeCount} node(s)</span> and <span className="text-red-600">{deleteDialogData.edgeCount} connection(s)</span>?
               </p>
-              <p className="text-stone-400 text-sm mt-2">
+              <p className="text-black text-sm font-bold uppercase tracking-wide mt-2 opacity-60">
                 This action cannot be undone.
               </p>
             </div>
             
-            <div className="flex gap-3 justify-end">
+            <div className="px-8 pb-8 pt-0 flex flex-col gap-3">
+              <button
+                onClick={handleConfirmDelete}
+                className="w-full py-4 bg-black text-white text-lg font-bold uppercase tracking-widest hover:bg-stone-800 transition-colors shadow-none transform active:translate-y-1"
+              >
+                Delete
+              </button>
               <button
                 onClick={() => {
                   setShowDeleteDialog(false);
                   setDeleteDialogData(null);
                 }}
-                className="px-5 py-2.5 bg-stone-800 hover:bg-stone-700 text-white rounded font-medium transition-colors border border-stone-700"
+                className="w-full py-4 bg-white text-black border-4 border-black text-lg font-bold uppercase tracking-widest hover:bg-stone-100 transition-colors"
               >
                 Cancel
-              </button>
-              <button
-                onClick={handleConfirmDelete}
-                className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded font-medium transition-colors shadow-lg shadow-red-900/50"
-              >
-                Delete
               </button>
             </div>
           </div>
@@ -669,35 +688,41 @@ const AgentBuilderContent: React.FC = () => {
 
       {/* Confirm Load Template Dialog */}
       {showConfirmDialog && confirmDialogData && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[60]">
-          <div className="bg-stone-900 border-2 border-orange-600 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl">
-            <div className="mb-5">
-              <h3 className="text-xl font-bold text-white mb-2 font-mono uppercase">
-                Load Template
-              </h3>
-              <p className="text-stone-300 leading-relaxed">
-                Loading "<span className="text-orange-500 font-semibold">{confirmDialogData.templateName}</span>" will replace your current work.
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] font-mono">
+          <div className="relative bg-white border-4 border-black max-w-md w-full mx-4 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] antialiased">
+            <div className="flex items-center px-6 py-4 border-b-4 border-black bg-[#FFEBB0]">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-6 h-6 text-black" strokeWidth={3} />
+                <h3 className="text-xl font-bold uppercase tracking-wide text-black">
+                  Load Template
+                </h3>
+              </div>
+            </div>
+            
+            <div className="p-10 text-center">
+              <p className="text-black text-lg font-bold uppercase tracking-wide leading-relaxed">
+                Loading "<span className="text-orange-600">{confirmDialogData.templateName}</span>" will replace your current work.
               </p>
-              <p className="text-stone-400 text-sm mt-2">
+              <p className="text-black text-sm font-bold uppercase tracking-wide mt-2 opacity-60">
                 This action cannot be undone.
               </p>
             </div>
             
-            <div className="flex gap-3 justify-end">
+            <div className="px-8 pb-8 pt-0 flex flex-col gap-3">
+              <button
+                onClick={handleConfirmLoadTemplate}
+                className="w-full py-4 bg-black text-white text-lg font-bold uppercase tracking-widest hover:bg-stone-800 transition-colors shadow-none transform active:translate-y-1"
+              >
+                Load Template
+              </button>
               <button
                 onClick={() => {
                   setShowConfirmDialog(false);
                   setConfirmDialogData(null);
                 }}
-                className="px-5 py-2.5 bg-stone-800 hover:bg-stone-700 text-white rounded font-medium transition-colors border border-stone-700"
+                className="w-full py-4 bg-white text-black border-4 border-black text-lg font-bold uppercase tracking-widest hover:bg-stone-100 transition-colors"
               >
                 Cancel
-              </button>
-              <button
-                onClick={handleConfirmLoadTemplate}
-                className="px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded font-medium transition-colors shadow-lg shadow-orange-900/50"
-              >
-                Load Template
               </button>
             </div>
           </div>
@@ -706,6 +731,9 @@ const AgentBuilderContent: React.FC = () => {
 
       {/* API Keys Modal */}
       <APIKeysModal isOpen={showAPIKeys} onClose={() => setShowAPIKeys(false)} />
+      
+      {/* Custom Alert */}
+      <AlertComponent />
     </div>
   );
 };

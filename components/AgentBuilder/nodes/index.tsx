@@ -2,7 +2,7 @@ import { Play, StopCircle, Brain, Mic, Volume2 } from 'lucide-react';
 import { BaseNode } from './BaseNode';
 
 export function StartNode({ data }: any) {
-  return <BaseNode data={data} icon={<Play size={18} />} color="bg-green-100" hasInput={false} />;
+  return <BaseNode data={data} icon={<Play size={18} />} color="bg-emerald-100" hasInput={false} />;
 }
 
 export function EndNode({ data }: any) {

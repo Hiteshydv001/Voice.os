@@ -3,6 +3,7 @@ import { Bot, Sparkles, Save, Edit3, Phone, Terminal, X, Loader2 } from 'lucide-
 import { generateAgentScript } from '../services/geminiService';
 import { Agent } from '../types';
 import CallSimulator from './CallSimulator';
+import { useCustomAlert } from './ui/custom-alert';
 
 interface AgentBuilderProps {
   onSave: (agent: Agent) => void;
@@ -11,6 +12,7 @@ interface AgentBuilderProps {
 }
 
 const AgentBuilder: React.FC<AgentBuilderProps> = ({ onSave, initialAgent, onCancel }) => {
+  const { showAlert, AlertComponent } = useCustomAlert();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
   const [showSimulator, setShowSimulator] = useState(false);
@@ -77,12 +79,12 @@ const AgentBuilder: React.FC<AgentBuilderProps> = ({ onSave, initialAgent, onCan
   const handleSave = () => {
     // Validate required fields
     if (!formData.name || !formData.productDescription || !formData.goal) {
-      alert('Please fill in all required fields (Name, Product Description, Goal)');
+      showAlert('Please fill in all required fields (Name, Product Description, Goal)', { type: 'warning' });
       return;
     }
 
     if (!generatedScript.opening || !generatedScript.closing || !generatedScript.objectionHandling) {
-      alert('Please generate a script first');
+      showAlert('Please generate a script first', { type: 'warning' });
       return;
     }
 
@@ -319,6 +321,9 @@ const AgentBuilder: React.FC<AgentBuilderProps> = ({ onSave, initialAgent, onCan
           )}
         </div>
       </div>
+      
+      {/* Custom Alert */}
+      <AlertComponent />
     </div>
   );
 };

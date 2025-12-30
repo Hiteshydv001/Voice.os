@@ -17,7 +17,7 @@ const nodeItems: Array<{
     type: 'start',
     icon: Play,
     label: 'Start',
-    color: 'bg-green-100 border-green-500',
+    color: 'bg-emerald-100 border-emerald-500',
     description: 'Entry point - Audio or Text input',
   },
   {

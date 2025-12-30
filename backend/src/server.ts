@@ -88,7 +88,7 @@ app.use(express.urlencoded({ extended: false }));
 const twimlPath = join(__dirname, "twiml.xml");
 const twimlTemplate = readFileSync(twimlPath, "utf-8");
 
-app.get("/public-url", (req, res) => {
+app.get("/public-url", (_req, res) => {
   res.json({ publicUrl: PUBLIC_URL });
 });
 
@@ -180,7 +180,7 @@ app.post("/twiml", (req, res) => {
 });
 
 // Legacy route for backward compatibility
-app.post("/voice/openai/incoming", (req, res) => {
+app.post("/voice/openai/incoming", (_req, res) => {
   try {
     if (!PUBLIC_URL) {
       console.error("PUBLIC_URL is not set");
@@ -200,17 +200,17 @@ app.post("/voice/openai/incoming", (req, res) => {
 });
 
 // New endpoint to list available tools (schemas)
-app.get("/tools", (req, res) => {
+app.get("/tools", (_req, res) => {
   res.json(functions.map((f) => f.schema));
 });
 
-app.get("/api/twilio", (req, res) => {
+app.get("/api/twilio", (_req, res) => {
   res.json({
     credentialsSet: !!(TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN),
   });
 });
 
-app.get("/api/twilio/numbers", async (req: Request, res: Response) => {
+app.get("/api/twilio/numbers", async (_req: Request, res: Response) => {
   if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
     res.status(500).json({ error: "Twilio credentials not configured" });
     return;
@@ -346,26 +346,29 @@ app.get("/api/twilio/recording/:callSid", async (req: Request, res: Response) =>
 });
 
 // Demos API
-app.get('/api/demos', (req, res) => {
+app.get('/api/demos', (_req, res) => {
   res.json({ demos: scheduledDemos });
 });
 
-app.put('/api/demos/:id', (req: Request, res: Response) => {
-  const id = req.params.id;
+const updateDemo: express.RequestHandler = (req, res) => {
+  const id = req.params.id as string;
   const demo = scheduledDemos.find(d => d.id === id);
-  if (!demo) return res.status(404).json({ error: 'Demo not found' });
+  if (!demo) { res.status(404).json({ error: 'Demo not found' }); return; }
   const { status } = req.body;
   if (status) demo.status = status;
   res.json({ success: true });
-});
+};
 
-app.delete('/api/demos/:id', (req: Request, res: Response) => {
-  const id = req.params.id;
+const deleteDemoHandler: express.RequestHandler = (req, res) => {
+  const id = req.params.id as string;
   const idx = scheduledDemos.findIndex(d => d.id === id);
-  if (idx === -1) return res.status(404).json({ error: 'Demo not found' });
+  if (idx === -1) { res.status(404).json({ error: 'Demo not found' }); return; }
   scheduledDemos.splice(idx, 1);
   res.json({ success: true });
-});
+};
+
+app.put('/api/demos/:id', updateDemo);
+app.delete('/api/demos/:id', deleteDemoHandler);
 
 // ============= Deepgram STT Proxy =============
 app.post("/api/deepgram/transcribe", async (req: Request, res: Response) => {
@@ -501,18 +504,6 @@ app.post("/api/groq/chat", async (req: Request, res: Response) => {
 });
 
 // ============= Minimax TTS API Proxy =============
-// Minimax TTS Voices (Official MiniMax voice IDs from docs)
-const MINIMAX_VOICES = [
-  { voice_id: 'English_Graceful_Lady', name: 'Graceful Lady', language: 'en-US', gender: 'FEMALE', category: 'english', description: 'Graceful female voice' },
-  { voice_id: 'English_Insightful_Speaker', name: 'Insightful Speaker', language: 'en-US', gender: 'MALE', category: 'english', description: 'Insightful male voice' },
-  { voice_id: 'English_radiant_girl', name: 'Radiant Girl', language: 'en-US', gender: 'FEMALE', category: 'english', description: 'Radiant young female voice' },
-  { voice_id: 'English_Persuasive_Man', name: 'Persuasive Man', language: 'en-US', gender: 'MALE', category: 'english', description: 'Persuasive male voice' },
-  { voice_id: 'moss_audio_6dc281eb-713c-11f0-a447-9613c873494c', name: 'Moss Voice 1', language: 'en-US', gender: 'MALE', category: 'english', description: 'Professional voice' },
-  { voice_id: 'moss_audio_570551b1-735c-11f0-b236-0adeeecad052', name: 'Moss Voice 2', language: 'en-US', gender: 'FEMALE', category: 'english', description: 'Clear female voice' },
-  { voice_id: 'moss_audio_ad5baf92-735f-11f0-8263-fe5a2fe98ec8', name: 'Moss Voice 3', language: 'en-US', gender: 'MALE', category: 'english', description: 'Deep male voice' },
-  { voice_id: 'English_Lucky_Robot', name: 'Lucky Robot', language: 'en-US', gender: 'MALE', category: 'english', description: 'Robotic voice' },
-];
-
 // Minimax TTS endpoint
 app.post("/api/minimax/tts", async (req: Request, res: Response) => {
   if (!MINIMAX_API_KEY) {
@@ -684,7 +675,7 @@ wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
     console.log(`🔌 WebSocket connected. Waiting for Stream start event with callId...`);
     
     // Pass pendingCallConfigs map to session manager so it can retrieve config from start event
-    handleCallConnection(currentCall, OPENAI_API_KEY, undefined, pendingCallConfigs);
+    handleCallConnection(currentCall, OPENAI_API_KEY, pendingCallConfigs);
   } else if (pathname === "/logs") {
     if (currentLogs) currentLogs.close();
     currentLogs = ws;

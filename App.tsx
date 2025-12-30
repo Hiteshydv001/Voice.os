@@ -197,8 +197,9 @@ const AppContent: React.FC = () => {
 
     // 2. CHECK CREDITS
     const costPerCall = 5;
-    const totalCost = targetLeads.length * costPerCall;
     const currentCredits = userProfile?.credits || 0;
+    const uid = currentUser!.uid;
+    const selectedAgent = agent!;
 
     if (currentCredits < 5) {
         setShowSubscription(true);
@@ -216,7 +217,7 @@ const AppContent: React.FC = () => {
       };
       const updatedCampaigns = [activeCampaign, ...campaigns];
       setCampaigns(updatedCampaigns);
-      storage.saveCampaigns(currentUser.uid, updatedCampaigns);
+      storage.saveCampaigns(uid, updatedCampaigns);
 
       // Log activity
       handleAddLog({
@@ -248,7 +249,7 @@ const AppContent: React.FC = () => {
                       } 
                     : c
                 );
-                if (currentUser) storage.saveCampaigns(currentUser.uid, current);
+                storage.saveCampaigns(uid, current);
                 return current;
             });
 
@@ -258,14 +259,14 @@ const AppContent: React.FC = () => {
                 phone: lead.phone,
                 status: 'Dialing...',
             time: new Date().toLocaleTimeString(),
-            agentName: agent.name
+            agentName: selectedAgent.name
         });
 
         try {
             // Perform the call with agent's custom script
             const callStartTime = Date.now();
             const callStartTimeISO = new Date().toISOString();
-            const callResponse = await makeOutboundCall(lead.phone, agent);
+            const callResponse = await makeOutboundCall(lead.phone, selectedAgent);
             const callDuration = Math.floor((Date.now() - callStartTime) / 1000);
 
             // Record successful call result
@@ -284,10 +285,10 @@ const AppContent: React.FC = () => {
             // Save to Call History with callSid for recording retrieval
             const callHistoryRecord: CallHistoryRecord = {
                 id: `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                userId: currentUser.uid,
+                userId: uid,
                 callSid: callResponse?.callSid, // Store Twilio Call SID for recording retrieval
-                agentId: agent.id,
-                agentName: agent.name,
+                agentId: selectedAgent.id,
+                agentName: selectedAgent.name,
                 leadId: lead.id,
                 leadName: lead.name,
                 leadPhone: lead.phone,
@@ -299,28 +300,28 @@ const AppContent: React.FC = () => {
                 timestamp: new Date().toISOString(),
                 startTime: callStartTimeISO,
                 endTime: new Date().toISOString(),
-                script: agent.script,
+                script: selectedAgent.script,
                 aiModel: 'gemini-flash-latest',
                 sentiment: callResult.sentiment,
                 outcome: 'Call completed successfully',
                 notes: `Campaign call to ${lead.name}. Status: Success`
             };
-            await storage.saveCallHistory(currentUser.uid, callHistoryRecord);
+            await storage.saveCallHistory(uid, callHistoryRecord);
 
             // Track call in real-time traffic analytics
             const isConversion = callResult.sentiment === 'Positive'; // Consider positive sentiment as conversion
             await import('./services/trafficAnalyticsService').then(module => 
-                module.trackCall(currentUser.uid, isConversion)
+                module.trackCall(uid, isConversion)
             );
 
             // DEDUCT CREDITS
-            await deductCredits(currentUser.uid, costPerCall);
+            await deductCredits(uid, costPerCall);
             refreshProfile(); // Trigger UI update for credit counter
 
             // Update Lead Status
             setLeads(prev => {
                 const updated = prev.map(l => l.id === lead.id ? { ...l, status: 'Contacted' as const } : l);
-                storage.saveLeads(currentUser.uid, updated);
+                storage.saveLeads(uid, updated);
                 return updated;
             });
 
@@ -328,9 +329,9 @@ const AppContent: React.FC = () => {
             handleAddLog({
                 id: Date.now() + 1,
                 phone: lead.phone,
-                status: `Outbound (${agent.name})`,
+                status: `Outbound (${selectedAgent.name})`,
                 time: new Date().toLocaleTimeString(),
-                agentName: agent.name
+                agentName: selectedAgent.name
             });
 
         } catch (error: any) {
@@ -338,7 +339,7 @@ const AppContent: React.FC = () => {
             console.error("Error details:", {
                 message: error.message,
                 lead: lead.phone,
-                agent: agent.name
+                agent: selectedAgent.name
             });
             
             // Show helpful error message
@@ -375,7 +376,7 @@ const AppContent: React.FC = () => {
                 phone: lead.phone,
                 status: `Failed: ${error.message?.substring(0, 50) || 'Unknown error'}`,
                 time: new Date().toLocaleTimeString(),
-                agentName: agent.name
+                agentName: selectedAgent.name
             });
         }
 
@@ -395,11 +396,15 @@ const AppContent: React.FC = () => {
               } 
             : c
         );
-        storage.saveCampaigns(currentUser.uid, current);
+        storage.saveCampaigns(uid, current);
         return current;
     });
 
     showAlert(`Campaign Completed! ${callResults.filter(r => r.status === 'Success').length} successful calls out of ${callResults.length} attempts.`, { type: 'success' });
+      }
+      processCalls();
+    }
+    continueCampaign();
   };
 
   return (

@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LayoutDashboard, Users, PhoneOutgoing, Bot, Settings, LogOut, Menu, Terminal, Mic, Network, X, Calendar, Phone } from 'lucide-react';
+import { LayoutDashboard, Users, PhoneOutgoing, Bot, Settings, LogOut, Menu, Terminal, Mic, Network, Calendar } from 'lucide-react';
 
 const Layout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);

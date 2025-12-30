@@ -145,7 +145,6 @@ function tryConnectModel() {
 
   session.modelConn.on("open", () => {
     const config = session.saved_config || {};
-    const agentName = session.agentConfig?.name || "AI Assistant";
 
     jsonSend(session.modelConn, {
       type: "session.update",

@@ -414,7 +414,8 @@ const getRecordingHandler: RequestHandler = async (req, res) => {
           const found = arr.find((c: any) => c.callSid === callSid);
           if (found) {
             // Return metadata as JSON
-            return res.json({ found, source: 'server-file' });
+            res.json({ found, source: 'server-file' });
+            return;
           }
         } catch (err) {}
       }
@@ -481,12 +482,15 @@ const getServerCallHistory: RequestHandler = (req, res) => {
     if (fs.existsSync(filePath)) {
       const raw = fs.readFileSync(filePath, 'utf-8');
       const arr = JSON.parse(raw || '[]');
-      return res.json({ records: arr });
+      res.json({ records: arr });
+      return;
     }
-    return res.json({ records: [] });
+    res.json({ records: [] });
+    return;
   } catch (err) {
     console.error('Error reading server call history:', err);
-    return res.status(500).json({ error: 'Failed to read server call history' });
+    res.status(500).json({ error: 'Failed to read server call history' });
+    return;
   }
 };
 

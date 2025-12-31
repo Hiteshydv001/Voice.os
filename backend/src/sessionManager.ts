@@ -18,6 +18,12 @@ interface Session {
     tone?: string;
   };
   pendingCallConfigs?: Map<string, any>; // Reference to pending configs
+
+  // Blocking/Buffering state for strict opening enforcement
+  blockingMode?: boolean; // When true, buffer audio until validated
+  blockingValidated?: boolean; // Whether we've seen a validated agent utterance
+  bufferedAudio?: Map<string, string[]>; // item_id -> array of delta payloads
+  blockingTimer?: NodeJS.Timeout | number;
 }
 
 let session: Session = {};
@@ -246,6 +252,22 @@ Tone: Professional, friendly, and concise.`,
       },
     });
 
+    // Activate strict blocking mode until we validate the first agent utterance
+    try {
+      session.blockingMode = true;
+      session.blockingValidated = false;
+      session.bufferedAudio = new Map();
+
+      const BLOCKING_TIMEOUT_MS = parseInt(process.env.AGENT_OPENING_BLOCK_MS || '3000', 10);
+      if (session.blockingTimer) clearTimeout(session.blockingTimer as any);
+      session.blockingTimer = setTimeout(() => {
+        // Timeout: flush what we have to avoid indefinite silence and log for diagnostics
+        console.warn('Blocking timeout reached without validation; flushing buffered audio as fallback');
+        flushBufferedAudio(true);
+      }, BLOCKING_TIMEOUT_MS) as any;
+    } catch (err) {
+      console.warn('Error initializing blocking mode:', err);
+    }
 
     session.modelConn!.on("message", handleModelMessage);
     session.modelConn!.on("error", closeModel);
@@ -271,18 +293,32 @@ function handleModelMessage(data: RawData) {
         }
         if (event.item_id) session.lastAssistantItem = event.item_id;
 
-        console.log('Forwarding audio delta to Twilio (item_id=' + event.item_id + ', bytes=' + (event.delta ? event.delta.length : 0) + ')');
+        // If blocking mode is active and we have not validated the opening, buffer the audio instead of forwarding
+        if (session.blockingMode && !session.blockingValidated) {
+          try {
+            const key = event.item_id || 'unknown';
+            if (!session.bufferedAudio) session.bufferedAudio = new Map();
+            const arr = session.bufferedAudio.get(key) || [];
+            arr.push(event.delta || '');
+            session.bufferedAudio.set(key, arr);
+            console.log(`Buffered audio delta for item ${key} (bytes=${event.delta ? event.delta.length : 0}). Total chunks: ${arr.length}`);
+          } catch (err) {
+            console.warn('Failed to buffer audio delta:', err);
+          }
+        } else {
+          console.log('Forwarding audio delta to Twilio (item_id=' + event.item_id + ', bytes=' + (event.delta ? event.delta.length : 0) + ')');
 
-        jsonSend(session.twilioConn, {
-          event: "media",
-          streamSid: session.streamSid,
-          media: { payload: event.delta },
-        });
+          jsonSend(session.twilioConn, {
+            event: "media",
+            streamSid: session.streamSid,
+            media: { payload: event.delta },
+          });
 
-        jsonSend(session.twilioConn, {
-          event: "mark",
-          streamSid: session.streamSid,
-        });
+          jsonSend(session.twilioConn, {
+            event: "mark",
+            streamSid: session.streamSid,
+          });
+        }
       }
       break;
 
@@ -339,34 +375,74 @@ function handleModelMessage(data: RawData) {
             }
           }
 
-          // Detect if the model spoke as the customer (heuristic)
+          // Validation heuristic for agent utterances
           const lower = textContent.toLowerCase();
-          const greetsAgent = new RegExp(`^(hello|hi|hey)\s*,?\s*${agentName.toLowerCase()}`);
+          const containsAgentName = new RegExp(`\b${escapeRegExp(agentName.toLowerCase())}\b`).test(lower);
+          const openingMatches = session.agentConfig?.opening ? lower.includes(session.agentConfig.opening.toLowerCase().slice(0, 20)) : false;
           const customerIndicators = /(interested|schedule|demo|how about next week|sounds good|i'm interested|i am interested|would love to)/i;
 
-          if (greetsAgent.test(lower) || customerIndicators.test(lower)) {
-            // The model appears to be speaking as the customer - log and issue a corrective instruction
-            console.warn('Detected likely customer-role output from model; issuing corrective instruction and preventing further customer-role speech');
+          const isLikelyAgent = containsAgentName || openingMatches;
+          const isLikelyCustomer = customerIndicators.test(lower);
 
-            if (session.modelConn) {
-              // Add an explicit assistant message committing the role rule
-              jsonSend(session.modelConn, {
-                type: "conversation.item.create",
-                item: {
-                  type: "message",
-                  role: "assistant",
-                  content: [{ type: "output_text", text: `Do NOT simulate or speak as the customer. You must only speak as the agent ${agentName}. Stop generating any customer-role text or audio.` }],
-                },
-              });
+          if (session.blockingMode && !session.blockingValidated) {
+            // If it's a valid agent utterance, flush the buffered audio and lift blocking
+            if (isLikelyAgent && !isLikelyCustomer) {
+              console.log('Validated agent utterance detected; flushing buffered audio and lifting blocking');
+              session.blockingValidated = true;
+              if (session.blockingTimer) { clearTimeout(session.blockingTimer as any); session.blockingTimer = undefined; }
+              flushBufferedAudio(false, item.item_id);
+            } else if (isLikelyCustomer) {
+              // Detected customer speech during blocking; discard buffers and instruct model
+              console.warn('Detected customer-role content during blocking; discarding buffered audio and instructing model');
+              discardBufferedAudio(item.item_id);
 
-              // Also send a response.create to explicitly tell the model to stop producing that behavior
-              jsonSend(session.modelConn, {
-                type: "response.create",
-                response: {
-                  modalities: ["text"],
-                  instructions: `Stop generating speech as the customer. From now on, only produce agent responses as ${agentName}.`,
-                },
-              });
+              if (session.modelConn) {
+                jsonSend(session.modelConn, {
+                  type: "conversation.item.create",
+                  item: {
+                    type: "message",
+                    role: "assistant",
+                    content: [{ type: "output_text", text: `Do NOT simulate or speak as the customer. You must only speak as the agent ${agentName}. Stop generating any customer-role text or audio.` }],
+                  },
+                });
+
+                jsonSend(session.modelConn, {
+                  type: "response.create",
+                  response: {
+                    modalities: ["text"],
+                    instructions: `Stop generating speech as the customer. From now on, only produce agent responses as ${agentName}.`,
+                  },
+                });
+              }
+            } else {
+              // Neither clearly agent nor customer; we'll keep waiting (or timeout will fire)
+              console.log('Received ambiguous output during blocking; waiting for clearer output or timeout');
+            }
+          } else {
+            // Non-blocking sanitization/heuristics (existing behavior)
+            if (isLikelyCustomer) {
+              console.warn('Detected likely customer-role output from model; issuing corrective instruction and preventing further customer-role speech');
+
+              if (session.modelConn) {
+                // Add an explicit assistant message committing the role rule
+                jsonSend(session.modelConn, {
+                  type: "conversation.item.create",
+                  item: {
+                    type: "message",
+                    role: "assistant",
+                    content: [{ type: "output_text", text: `Do NOT simulate or speak as the customer. You must only speak as the agent ${agentName}. Stop generating any customer-role text or audio.` }],
+                  },
+                });
+
+                // Also send a response.create to explicitly tell the model to stop producing that behavior
+                jsonSend(session.modelConn, {
+                  type: "response.create",
+                  response: {
+                    modalities: ["text"],
+                    instructions: `Stop generating speech as the customer. From now on, only produce agent responses as ${agentName}.`,
+                  },
+                });
+              }
             }
           }
         }
@@ -376,6 +452,65 @@ function handleModelMessage(data: RawData) {
 
       break;
     }
+  }
+}
+
+function flushBufferedAudio(force: boolean, itemId?: string) {
+  if (!session.twilioConn || !session.streamSid || !session.bufferedAudio) return;
+
+  try {
+    if (itemId) {
+      const arr = session.bufferedAudio.get(itemId) || [];
+      console.log(`Flushing ${arr.length} buffered chunks for item ${itemId} (force=${force})`);
+      for (const chunk of arr) {
+        jsonSend(session.twilioConn, {
+          event: "media",
+          streamSid: session.streamSid,
+          media: { payload: chunk },
+        });
+      }
+      // mark after the sequence
+      jsonSend(session.twilioConn, { event: "mark", streamSid: session.streamSid });
+      session.bufferedAudio.delete(itemId);
+    } else {
+      // flush all
+      for (const [key, arr] of session.bufferedAudio.entries()) {
+        console.log(`Flushing ${arr.length} buffered chunks for item ${key} (force=${force})`);
+        for (const chunk of arr) {
+          jsonSend(session.twilioConn, {
+            event: "media",
+            streamSid: session.streamSid,
+            media: { payload: chunk },
+          });
+        }
+        jsonSend(session.twilioConn, { event: "mark", streamSid: session.streamSid });
+        session.bufferedAudio.delete(key);
+      }
+    }
+
+    if (force) {
+      // lift blocking to avoid further silence
+      session.blockingValidated = true;
+      session.blockingMode = false;
+      if (session.blockingTimer) { clearTimeout(session.blockingTimer as any); session.blockingTimer = undefined; }
+    }
+  } catch (err) {
+    console.warn('Error flushing buffered audio:', err);
+  }
+}
+
+function discardBufferedAudio(itemId?: string) {
+  if (!session.bufferedAudio) return;
+  try {
+    if (itemId) {
+      console.log(`Discarding buffered audio for item ${itemId}`);
+      session.bufferedAudio.delete(itemId);
+    } else {
+      console.log('Discarding all buffered audio');
+      session.bufferedAudio.clear();
+    }
+  } catch (err) {
+    console.warn('Error discarding buffered audio:', err);
   }
 }
 
@@ -411,6 +546,7 @@ function handleTruncation() {
 }
 
 function closeModel() {
+  if (session.blockingTimer) { clearTimeout(session.blockingTimer as any); session.blockingTimer = undefined; }
   cleanupConnection(session.modelConn);
   session.modelConn = undefined;
   if (!session.twilioConn && !session.frontendConn) session = {};
@@ -438,6 +574,11 @@ function closeAllConnections() {
 
 function cleanupConnection(ws?: WebSocket) {
   if (isOpen(ws)) ws.close();
+}
+
+// Escape a string for use in a RegExp
+function escapeRegExp(str: string) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function parseMessage(data: RawData): any {

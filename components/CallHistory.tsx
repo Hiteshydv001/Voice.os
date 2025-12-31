@@ -119,7 +119,7 @@ const CallHistory: React.FC = () => {
         // Create a blob URL and open in new tab
         const blob = await response.blob();
         const blobUrl = URL.createObjectURL(blob);
-        const newWindow = window.open(blobUrl, '_blank');
+        window.open(blobUrl, '_blank');
         
         // Clean up blob URL after a delay
         setTimeout(() => {

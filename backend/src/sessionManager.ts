@@ -101,7 +101,7 @@ function handleTwilioMessage(data: RawData) {
 
       // Extract callId from start parameters (if provided) and load pending agent config
       try {
-        const params = msg.start?.parameters || msg.start?.custom_parameters || [];
+        const params = msg.start?.parameters || msg.start?.custom_parameters || msg.start?.customParameters || [];
         let callId: string | undefined;
 
         if (Array.isArray(params)) {
@@ -206,6 +206,16 @@ Tone: Professional, friendly, and concise.`,
 
     console.log('Using opening instruction for model:', openingInstruction);
 
+    // Commit the opening as an explicit assistant message first so the model's context contains the exact text
+    jsonSend(session.modelConn, {
+      type: "conversation.item.create",
+      item: {
+        type: "message",
+        role: "assistant",
+        content: [{ type: "output_text", text: openingInstruction }],
+      },
+    });
+
     // Primary opening: ask model to speak the prepared opening line
     jsonSend(session.modelConn, {
       type: "response.create",
@@ -268,6 +278,8 @@ function handleModelMessage(data: RawData) {
 
     case "response.output_item.done": {
       const { item } = event;
+
+      // If the model made a function call, process the function result as before
       if (item.type === "function_call") {
         handleFunctionCall(item)
           .then((output) => {
@@ -286,7 +298,38 @@ function handleModelMessage(data: RawData) {
           .catch((err) => {
             console.error("Error handling function call:", err);
           });
+        break;
       }
+
+      // If the model finished producing an output item with text, sanitize names
+      try {
+        const agentName = session.agentConfig?.name || 'Unit';
+        // Attempt to extract text if present
+        const textContent = (item.content && Array.isArray(item.content) && item.content[0]?.text) ? item.content[0].text : null;
+        if (textContent) {
+          const sanitized = textContent
+            .replace(/\bJames\b/gi, agentName)
+            .replace(/\b(Voice Rep|Voice Representative|Sales Rep|Sales Representative|Senior Sales Rep|Voice\.OS Rep|Voice OS Rep)\b/gi, agentName)
+            .replace(/((?:Hello|Hi|Hey),?\s+(?:this\s+is|I'm|I am)\s+)[A-Za-z0-9_()\-\s]+/gi, `$1${agentName}`);
+
+          if (sanitized && sanitized !== textContent) {
+            console.log('Sanitized model output to enforce agent name:', agentName);
+            // Trigger a new short response with sanitized text to ensure audio matches
+            if (session.modelConn) {
+              jsonSend(session.modelConn, {
+                type: "response.create",
+                response: {
+                  modalities: ["text", "audio"],
+                  instructions: sanitized,
+                },
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Error sanitizing model output:', err);
+      }
+
       break;
     }
   }

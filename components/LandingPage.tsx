@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Terminal, Cpu, Globe, Zap, ArrowRight, ShieldCheck, 
   Check, Star, ChevronDown, ChevronUp,
-  Phone, Code, Upload, BarChart3, Radio
+  Phone, Code, Upload, BarChart3, Radio, Play
 } from 'lucide-react';
 
 const LandingPage: React.FC = () => {
@@ -151,6 +151,56 @@ const LandingPage: React.FC = () => {
             <p className="mt-8 text-stone-400 font-mono text-sm max-w-2xl mx-auto">
                 DEMO_LOG: See how our agents handle objections, qualify leads, and update the CRM in real-time. No human intervention required.
             </p>
+        </div>
+      </section>
+
+      {/* Pitch & Product Videos */}
+      <section id="videos" className="py-20 px-6 bg-white border-b-4 border-black">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-12 text-center">
+            <div className="inline-block border-2 border-black px-4 py-1 mb-6 text-sm font-bold uppercase tracking-widest bg-orange-100">
+              Media
+            </div>
+            <h2 className="text-4xl md:text-5xl font-black uppercase">Pitch Deck & Product Demo</h2>
+            <p className="mt-4 text-stone-600 max-w-2xl mx-auto">Two short videos showcasing our pitch deck and a live product demo. Click play or open on YouTube to view full screen.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {[
+              { key: 'pitch', title: 'Pitch Deck', subtitle: 'Overview & Investment Highlights', videoId: 'nrDoF9bg6jU' },
+              { key: 'product', title: 'Product Demo', subtitle: 'Full walkthrough of the live demo', videoId: 'nrDoF9bg6jU' }
+            ].map((v) => (
+              <div key={v.key} className="relative bg-black text-white border-4 border-black p-4 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-xl font-bold uppercase">{v.title}</h3>
+                    <p className="text-sm text-stone-300">{v.subtitle}</p>
+                  </div>
+                  <a
+                    href={`https://youtu.be/${v.videoId}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 bg-orange-600 text-black px-3 py-2 font-bold uppercase border-2 border-black hover:bg-white hover:text-orange-600 transition-all"
+                  >
+                    <Play className="h-4 w-4" />
+                    Watch on YouTube
+                  </a>
+                </div>
+
+                <div className="relative w-full aspect-video bg-stone-900 border-4 border-white">
+                  <iframe
+                    src={`https://www.youtube.com/embed/${v.videoId}`}
+                    title={`${v.title} Video`}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                    className="w-full h-full border-0"
+                  ></iframe>
+                </div>
+
+                <p className="mt-4 text-sm text-stone-300">Short clips to help partners and customers quickly understand what Voice.OS can do — perfect for decks, demos, or investor meetings.</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 

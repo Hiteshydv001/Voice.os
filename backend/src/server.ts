@@ -138,13 +138,6 @@ app.get("/twiml", (req, res) => {
       const twimlWithParams = twimlTemplate.replace("{{WS_URL}}", wsUrl.toString());
       res.type("text/xml").send(twimlWithParams);
     }
-</Response>`;
-
-      res.type("text/xml").send(twimlWithParams);
-    } else {
-      const twimlWithParams = twimlTemplate.replace("{{WS_URL}}", wsUrl.toString());
-      res.type("text/xml").send(twimlWithParams);
-    }
   } catch (error) {
     console.error("Error generating TwiML:", error);
     res.status(500).send("Error generating TwiML");
@@ -427,7 +420,6 @@ app.get("/api/twilio/recording/:callSid", async (req: Request, res: Response) =>
   } catch (err) {
     // ignore
   }
-  const { callSid } = req.params;
   
   if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
     res.status(500).json({ error: "Twilio credentials not configured" });

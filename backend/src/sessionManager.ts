@@ -97,7 +97,35 @@ function handleTwilioMessage(data: RawData) {
       session.latestMediaTimestamp = 0;
       session.lastAssistantItem = undefined;
       session.responseStartTimestamp = undefined;
-      
+
+      // Extract callId from start parameters (if provided) and load pending agent config
+      try {
+        const params = msg.start?.parameters || msg.start?.custom_parameters || [];
+        let callId: string | undefined;
+
+        if (Array.isArray(params)) {
+          const p = params.find((x: any) => x.name === 'callId' || x.name === 'call_id');
+          if (p) callId = p.value;
+        } else if (msg.start?.callId) {
+          callId = msg.start.callId;
+        }
+
+        if (callId && session.pendingCallConfigs) {
+          const cfg = session.pendingCallConfigs.get(callId);
+          if (cfg) {
+            session.agentConfig = {
+              name: cfg.name || cfg.agentName || cfg.agent?.name || 'Voice Rep',
+              opening: cfg.opening || cfg.agentScript?.opening || '',
+              goal: cfg.goal || cfg.agentScript?.goal,
+              tone: cfg.tone || cfg.agentScript?.tone
+            };
+            console.log('Loaded agent config for callId', callId, session.agentConfig);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to extract callId from start params:', err);
+      }
+
       tryConnectModel();
       break;
     case "media":
@@ -146,6 +174,10 @@ function tryConnectModel() {
   session.modelConn.on("open", () => {
     const config = session.saved_config || {};
 
+    // If agentConfig is set from the pending call, use that name/instructions; otherwise fall back to default
+    const agentName = session.agentConfig?.name || 'Voice Rep';
+    const openingInstruction = session.agentConfig?.opening || `Hello! This is ${agentName} from Voice Marketing AI. How are you doing today?`;
+
     jsonSend(session.modelConn, {
       type: "session.update",
       session: {
@@ -154,7 +186,7 @@ function tryConnectModel() {
         output_audio_format: "g711_ulaw",
         tools: functions.map((f) => f.schema),
         tool_choice: "auto",
-        instructions: `You are James, a Senior Sales Rep for Voice Marketing AI.
+        instructions: `You are ${agentName}, a Senior Sales Rep for Voice Marketing AI.
 Your goal: Briefly explain the value of voice AI for marketing and sales, then try to schedule a 15-minute demo.
 Behavior:
 - Keep responses short and conversational (1-2 sentences max)
@@ -171,10 +203,7 @@ Tone: Professional, friendly, and concise.`,
       type: "response.create",
       response: {
         modalities: ["text", "audio"],
-        instructions: "Please say exactly the following sentence: Hello! This is James from Voice Marketing AI. How are you doing today?",
-      },
-    });
-  });
+        instructions: openingInstruction,
 
   session.modelConn.on("message", handleModelMessage);
   session.modelConn.on("error", closeModel);

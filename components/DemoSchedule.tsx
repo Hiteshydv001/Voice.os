@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Calendar, User, Mail, Clock, Phone, CheckCircle, XCircle, Trash2, RefreshCw } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { storage } from '../services/storageService';
+import { Agent } from '../types';
 
 interface ScheduledDemo {
   id: string;
@@ -48,6 +51,22 @@ export default function DemoSchedule() {
     const interval = setInterval(() => fetchDemos(false), 10000);
     return () => clearInterval(interval);
   }, []);
+
+  // Load agents to display contextual messages (e.g., replace hardcoded "James")
+  const { currentUser } = useAuth();
+  const [agents, setAgents] = useState<Agent[]>([]);
+
+  useEffect(() => {
+    const loadAgents = async () => {
+      if (!currentUser) {
+        setAgents([]);
+        return;
+      }
+      const res = await storage.getAgents(currentUser.uid);
+      setAgents(res || []);
+    };
+    loadAgents();
+  }, [currentUser]);
 
   const updateDemoStatus = async (id: string, status: 'completed' | 'cancelled') => {
     try {
@@ -209,7 +228,10 @@ export default function DemoSchedule() {
             <p className="text-black text-lg mb-2 font-bold uppercase">No demos scheduled</p>
             <p className="text-stone-500 text-sm uppercase">
               {filter === 'all' 
-                ? 'Demos will appear here when James schedules them during calls'
+                ? (agents.length === 1
+                    ? `Demos will appear here when ${agents[0].name} schedules them during calls`
+                    : 'Demos will appear here when your agents schedule them during calls'
+                  )
                 : `No ${filter} demos found`
               }
             </p>

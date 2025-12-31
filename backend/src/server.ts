@@ -360,8 +360,7 @@ const updateDemo: express.RequestHandler = (req, res) => {
     demo.status = status;
     // When a demo is marked completed, record the time it was called
     if (status === 'completed') {
-      demo.called_at = new Date().toISOString();
-    } else if (status === 'cancelled') {
+      demo.called_at = new Date().toISOString();      console.log(`Demo ${id} marked completed. Called to: ${demo.phone || 'Unknown'}`);    } else if (status === 'cancelled') {
       // Clear called_at when cancelled
       demo.called_at = undefined;
     }

@@ -262,7 +262,10 @@ export default function DemoSchedule() {
                       {demo.called_at && (
                         <div className="flex items-center gap-2 text-black">
                           <Clock size={16} className="text-black shrink-0" />
-                          <span className="text-sm sm:text-base">Demo called: {new Date(demo.called_at).toLocaleString()}</span>
+                          <span className="text-sm sm:text-base">
+                            Demo called: {new Date(demo.called_at).toLocaleString()
+                            }{demo.phone ? ` — To: ${demo.phone}` : ''}
+                          </span>
                         </div>
                       )}
 

@@ -75,11 +75,29 @@ const UserActivity: React.FC = () => {
         .map(doc => {
           const data = doc.data();
           console.log('Activity log data:', data); // Debug log
+
+          // Derive action and details from available fields to handle legacy logs
+          const derivedAction =
+            data.action ||
+            data.status ||
+            (data.phone ? `Call to ${data.phone}` : null) ||
+            (data.actionText ? data.actionText : null) ||
+            'Unknown Action';
+
+          const derivedDetails =
+            data.details ||
+            (data.status ? `Status: ${data.status}` : null) ||
+            (data.agentName ? `Agent: ${data.agentName}` : null) ||
+            (data.outcome ? `Outcome: ${data.outcome}` : null) ||
+            'No details available';
+
+          const timestampValue = data.timestamp || data.time || data.createdAt || new Date().toISOString();
+
           return {
             id: doc.id,
-            action: data.action || 'Unknown Action',
-            timestamp: data.timestamp || new Date().toISOString(),
-            details: data.details || 'No details available'
+            action: derivedAction,
+            timestamp: timestampValue,
+            details: derivedDetails
           };
         }) as ActivityLog[];
       
@@ -107,11 +125,21 @@ const UserActivity: React.FC = () => {
 
   const formatTimestamp = (timestamp: string) => {
     if (!timestamp) return 'Unknown';
-    
     try {
-      const date = new Date(timestamp);
+      let date = new Date(timestamp);
+
+      // If parsing failed and string looks like a time-only value (e.g. "2:34 PM"), combine with today's date
+      if (isNaN(date.getTime())) {
+        const timeOnlyMatch = timestamp.match(/^\s*\d{1,2}:\d{2}(?::\d{2})?\s*(AM|PM|am|pm)?\s*$/);
+        if (timeOnlyMatch) {
+          const today = new Date();
+          const dateStr = today.toLocaleDateString('en-US');
+          date = new Date(`${dateStr} ${timestamp}`);
+        }
+      }
+
       if (isNaN(date.getTime())) return 'Invalid date';
-      
+
       const now = new Date();
       const diff = now.getTime() - date.getTime();
       const minutes = Math.floor(diff / 60000);
@@ -121,7 +149,9 @@ const UserActivity: React.FC = () => {
       if (minutes < 1) return 'Just now';
       if (minutes < 60) return `${minutes}m ago`;
       if (hours < 24) return `${hours}h ago`;
-      return `${days}d ago`;
+
+      // For older entries return a friendly date string
+      return date.toLocaleDateString();
     } catch (error) {
       console.error('Error formatting timestamp:', error);
       return 'Unknown';

@@ -107,8 +107,17 @@ function handleTwilioMessage(data: RawData) {
         if (Array.isArray(params)) {
           const p = params.find((x: any) => x.name === 'callId' || x.name === 'call_id');
           if (p) callId = p.value;
+        } else if (params && typeof params === 'object') {
+          // Twilio sometimes sends customParameters as an object: { callId: '...' }
+          if ((params as any).callId) callId = (params as any).callId;
+          else if ((params as any).call_id) callId = (params as any).call_id;
         } else if (msg.start?.callId) {
           callId = msg.start.callId;
+        }
+
+        if (!callId && session.pendingCallConfigs) {
+          // Diagnostic: log the start params shape so we can validate unexpected payloads
+          console.warn('No callId found in start params; start params:', JSON.stringify(msg.start || {}, null, 2));
         }
 
         if (callId && session.pendingCallConfigs) {

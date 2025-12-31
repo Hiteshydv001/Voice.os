@@ -45,11 +45,11 @@ export const generateAgentScript = async (
     return JSON.parse(text);
   } catch (error) {
     console.error("Failed to generate script:", error);
-    // Fallback for demo purposes
+    // On failure, return placeholders that reference the provided agent details (no fabricated content)
     return {
-      opening: `Hi, this is ${name}. I'm calling to tell you about our amazing ${product}. Do you have a moment?`,
-      objectionHandling: "I understand your hesitation. However, our solution is designed to be risk-free.",
-      closing: `Great! Let's get that ${goal} set up for you right away.`
+      opening: `Hi, this is ${name}. [Insert concise opening about ${product}]`,
+      objectionHandling: `[Insert objection-handling guidance tailored to ${product}]`,
+      closing: `[Insert closing to achieve: ${goal}]`
     };
   }
 };

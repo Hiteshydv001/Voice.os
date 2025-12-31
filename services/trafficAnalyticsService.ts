@@ -1,4 +1,5 @@
 import { db, auth } from './firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 import { doc, setDoc, getDoc, onSnapshot, Unsubscribe } from 'firebase/firestore';
 
 export interface DailyTrafficData {
@@ -191,7 +192,22 @@ export const subscribeToWeeklyTraffic = (
   // Ensure the client is authenticated and matches the userId required by security rules
   if (!auth.currentUser || auth.currentUser.uid !== userId) {
     console.warn('subscribeToWeeklyTraffic: Authentication not ready or UID mismatch', { authUid: auth.currentUser?.uid, userId });
-    // Return empty data and a no-op unsubscribe; caller should retry after auth is ready
+
+    // If there is no current user yet, wait for auth to initialize and then subscribe
+    let authUnsub: (() => void) | null = null;
+    if (!auth.currentUser) {
+      const onAuth = onAuthStateChanged(auth, (user) => {
+        if (user && user.uid === userId) {
+          // Auth ready and matches required UID: re-run subscribeToWeeklyTraffic by calling back into the API
+          authUnsub && authUnsub();
+          // We re-call subscribeToWeeklyTraffic to set up the actual listener
+          subscribeToWeeklyTraffic(userId, callback);
+        }
+      });
+      authUnsub = () => onAuth();
+    }
+
+    // Return empty data and unsubscribe that will cancel auth listener as needed
     const days = initializeWeeklyData();
     const emptyData = Object.entries(days).map(([name, data]) => ({
       name,
@@ -200,7 +216,10 @@ export const subscribeToWeeklyTraffic = (
       date: data.date
     }));
     callback(emptyData);
-    return () => {};
+
+    return () => {
+      if (authUnsub) authUnsub();
+    };
   }
 
   const weekStart = getWeekStart();

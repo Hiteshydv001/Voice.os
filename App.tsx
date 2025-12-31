@@ -70,14 +70,16 @@ const AppContent: React.FC = () => {
 
         // Attempt to listen for server-side call notifications (recording events)
         try {
-          const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-          const wsUrl = `${wsProtocol}://${window.location.host}/logs`;
+          const backendUrl = import.meta.env.VITE_BACKEND_URL || `${window.location.protocol}//${window.location.host}`;
+          const wsProtocol = backendUrl.startsWith('https') ? 'wss' : 'ws';
+          // derive host from BACKEND_URL if present
+          const backendHost = backendUrl.replace(/^https?:\/\//, '');
+          const wsUrl = `${wsProtocol}://${backendHost}/logs`;
 
           const connectLogsWebSocket = () => {
             try {
               const logsWs = new WebSocket(wsUrl);
               console.log('Creating logs websocket to', wsUrl);
-
               logsWs.onopen = () => console.log('Connected to server logs websocket:', wsUrl);
               logsWs.onmessage = async (evt) => {
                 try {

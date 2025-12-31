@@ -328,19 +328,23 @@ export const storage = {
 
   // Call History
   saveCallHistory: async (userId: string, call: CallHistoryRecord) => {
-    if (!userId) return;
+    if (!userId) {
+      console.error('saveCallHistory called with empty userId. Call object:', call);
+      return;
+    }
     
     try {
       // Save to Firestore top-level collection
       const callDocRef = doc(collection(db, 'call_history'));
-      await setDoc(callDocRef, {
+      const payload = {
         ...call,
         id: callDocRef.id,
         userId,
         timestamp: call.timestamp || new Date().toISOString(),
         createdAt: new Date().toISOString()
-      });
-      console.log('Call history saved:', callDocRef.id);
+      };
+      await setDoc(callDocRef, payload);
+      console.log('Call history saved:', callDocRef.id, 'for user:', userId, 'payload:', payload);
     } catch (error) {
       console.error('Error saving call history:', error);
     }

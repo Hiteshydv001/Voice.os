@@ -18,6 +18,7 @@ const CallHistory: React.FC = () => {
   useEffect(() => {
     if (!currentUser) return;
 
+    console.log('CallHistory mounted for user:', currentUser.uid);
     setLoading(true);
     console.log('Subscribing to call_history for user:', currentUser.uid);
 
@@ -30,11 +31,19 @@ const CallHistory: React.FC = () => {
     const unsubscribe = onSnapshot(callsQuery, (snapshot) => {
       const callRecords = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as CallHistoryRecord[];
       callRecords.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      console.log(`Loaded ${callRecords.length} call records from snapshot`);
+      console.log(`Loaded ${callRecords.length} call records from snapshot for user ${currentUser.uid}`);
       setCalls(callRecords);
       setLoading(false);
+
+      // If snapshot returns zero results, attempt a manual load as a fallback (diagnostic)
+      if (callRecords.length === 0) {
+        console.warn('Snapshot returned 0 call records, attempting manual load as fallback');
+        loadCallHistory();
+      }
     }, (err) => {
       console.error('Call history snapshot error:', err);
+      // Try manual load on error as well
+      loadCallHistory();
       setLoading(false);
     });
 

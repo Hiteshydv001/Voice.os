@@ -28,12 +28,23 @@ const CallHistory: React.FC = () => {
     );
 
     // Real-time listener so UI updates immediately when new calls are saved
-    const unsubscribe = onSnapshot(callsQuery, (snapshot) => {
+    const unsubscribe = onSnapshot(callsQuery, async (snapshot) => {
       const callRecords = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as CallHistoryRecord[];
       callRecords.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       console.log(`Loaded ${callRecords.length} call records from snapshot for user ${currentUser.uid}`);
       setCalls(callRecords);
       setLoading(false);
+
+      // Sync call history with traffic analytics
+      if (callRecords.length > 0) {
+        try {
+          await import('../services/trafficAnalyticsService').then(module =>
+            module.syncCallHistoryToTraffic(currentUser.uid, callRecords)
+          );
+        } catch (error) {
+          console.error('Error syncing traffic analytics:', error);
+        }
+      }
 
       // If snapshot returns zero results, attempt a manual load as a fallback (diagnostic)
       if (callRecords.length === 0) {
@@ -90,18 +101,42 @@ const CallHistory: React.FC = () => {
     }
   };
 
-  const handlePlayRecording = (call: CallHistoryRecord) => {
+  const handlePlayRecording = async (call: CallHistoryRecord) => {
     if (call.callSid) {
       const recordingUrl = getRecordingUrl(call.callSid);
-      window.open(recordingUrl, '_blank');
+      try {
+        // Fetch with ngrok bypass header
+        const response = await fetch(recordingUrl, {
+          headers: {
+            'ngrok-skip-browser-warning': 'true'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch recording');
+        }
+        
+        // Create a blob URL and open in new tab
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const newWindow = window.open(blobUrl, '_blank');
+        
+        // Clean up blob URL after a delay
+        setTimeout(() => {
+          URL.revokeObjectURL(blobUrl);
+        }, 100);
+      } catch (error) {
+        console.error('Error playing recording:', error);
+        alert('Failed to play recording. Please try again.');
+      }
     } else {
       alert('Recording not available for this call.');
     }
   };
 
-  const handleDownloadRecording = (call: CallHistoryRecord) => {
+  const handleDownloadRecording = async (call: CallHistoryRecord) => {
     if (call.callSid) {
-      downloadRecording(
+      await downloadRecording(
         call.callSid,
         `recording_${call.agentName}_${call.leadPhone}_${new Date(call.timestamp).toISOString().split('T')[0]}.mp3`
       );

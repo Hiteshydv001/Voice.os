@@ -140,8 +140,8 @@ const LandingPage: React.FC = () => {
                  <iframe 
                     width="100%" 
                     height="100%" 
-                    src="https://www.youtube.com/embed/90EZf3vSMHY" 
-                    title="VoiceMarketing.AI Demo" 
+                    src="https://www.youtube.com/embed/nrDoF9bg6jU" 
+                    title="Pitch Deck" 
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
                     allowFullScreen
                     className="w-full h-full"
@@ -167,7 +167,6 @@ const LandingPage: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {[
-              { key: 'pitch', title: 'Pitch Deck', subtitle: 'Overview & Investment Highlights', videoId: 'nrDoF9bg6jU' },
               { key: 'product', title: 'Product Demo', subtitle: 'Full walkthrough of the live demo', videoId: 'nrDoF9bg6jU' }
             ].map((v) => (
               <div key={v.key} className="relative bg-black text-white border-4 border-black p-4 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">

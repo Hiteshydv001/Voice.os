@@ -150,6 +150,8 @@ function tryConnectModel() {
       type: "session.update",
       session: {
         ...config,
+        input_audio_format: "g711_ulaw",
+        output_audio_format: "g711_ulaw",
         tools: functions.map((f) => f.schema),
         tool_choice: "auto",
         instructions: `You are James, a Senior Sales Rep for Voice Marketing AI.

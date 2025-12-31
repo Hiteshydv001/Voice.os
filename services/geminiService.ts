@@ -102,7 +102,12 @@ export const chatWithAgent = async (
     try {
       const safeName = agent.name || 'Unit';
       const before = text;
-      text = text.replace(/\bJames\b/g, safeName);
+
+      // Replace explicit 'James' leftover
+      text = text.replace(/\bJames\b/gi, safeName);
+
+      // Replace a variety of generic agent-name phrases with the correct name
+      text = text.replace(/\b(Voice Rep|Voice Representative|Sales Rep|Sales Representative|Senior Sales Rep|Voice\.OS Rep|Voice OS Rep)\b/gi, safeName);
 
       // If the opening line was present in the script but contains a different name, replace common greeting patterns
       text = text.replace(/((?:Hello|Hi|Hey),?\s+(?:this\s+is|I'm|I am)\s+)[A-Za-z0-9_()\-\s]+/gi, `$1${safeName}`);

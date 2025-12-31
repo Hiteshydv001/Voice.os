@@ -190,9 +190,10 @@ function tryConnectModel() {
         output_audio_format: "g711_ulaw",
         tools: functions.map((f) => f.schema),
         tool_choice: "auto",
-        instructions: `You are ${agentName}, a Senior Sales Rep for Voice Marketing AI.
-Your goal: Briefly explain the value of voice AI for marketing and sales, then try to schedule a 15-minute demo.
+        instructions: `You are ${agentName}. Use this exact name when introducing yourself and NEVER substitute it with generic phrases like "Voice Rep" or "Sales Representative".
+Goal: Briefly explain the value of voice AI for marketing and sales, then try to schedule a 15-minute demo.
 Behavior:
+- Always use the exact agent opening line provided and include the agent's name exactly as given
 - Keep responses short and conversational (1-2 sentences max)
 - Ask if they'd like to schedule a demo
 - If they agree (yes, ok, sure, sounds good, etc.), ask when works best for them
@@ -205,6 +206,7 @@ Tone: Professional, friendly, and concise.`,
 
     console.log('Using opening instruction for model:', openingInstruction);
 
+    // Primary opening: ask model to speak the prepared opening line
     jsonSend(session.modelConn, {
       type: "response.create",
       response: {
@@ -212,6 +214,18 @@ Tone: Professional, friendly, and concise.`,
         instructions: openingInstruction,
       },
     });
+
+    // Forceful clarification to ensure the model uses the agent's exact name and never substitutes a generic title
+    const forceOpening = `Repeat the following opening line exactly, verbatim: "${openingInstruction.replace(/"/g, '\\"')}". Do NOT replace the agent's name with any generic phrase such as "Voice Rep", "Sales Representative", or similar. From now on, always use the agent's exact name (${agentName}) when introducing yourself.`;
+
+    jsonSend(session.modelConn, {
+      type: "response.create",
+      response: {
+        modalities: ["text", "audio"],
+        instructions: forceOpening,
+      },
+    });
+
 
     session.modelConn!.on("message", handleModelMessage);
     session.modelConn!.on("error", closeModel);

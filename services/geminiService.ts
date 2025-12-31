@@ -96,7 +96,24 @@ export const chatWithAgent = async (
     }
 
     const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "I didn't quite catch that, could you repeat?";
+    let text = data.candidates?.[0]?.content?.parts?.[0]?.text || "I didn't quite catch that, could you repeat?";
+
+    // Ensure the agent's name is used consistently - replace any stray "James" with the agent name
+    try {
+      const safeName = agent.name || 'Unit';
+      const before = text;
+      text = text.replace(/\bJames\b/g, safeName);
+
+      // If the opening line was present in the script but contains a different name, replace common greeting patterns
+      text = text.replace(/((?:Hello|Hi|Hey),?\s+(?:this\s+is|I'm|I am)\s+)[A-Za-z0-9_()\-\s]+/gi, `$1${safeName}`);
+
+      if (text !== before) {
+        console.log('Sanitized agent name in LM response. Replaced content to use:', safeName);
+      }
+    } catch (err) {
+      console.warn('Failed to sanitize agent name in response:', err);
+    }
+
     return text;
   } catch (error) {
     console.error("Chat error:", error);

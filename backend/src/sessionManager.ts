@@ -203,6 +203,8 @@ Tone: Professional, friendly, and concise.`,
       },
     });
 
+    console.log('Using opening instruction for model:', openingInstruction);
+
     jsonSend(session.modelConn, {
       type: "response.create",
       response: {

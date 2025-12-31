@@ -47,6 +47,9 @@ const CallHistory: React.FC = () => {
       setLoading(false);
     });
 
+    // Also proactively attempt manual load to fetch server-side persisted records
+    loadCallHistory();
+
     return () => {
       console.log('Unsubscribing from call_history listener');
       unsubscribe();
@@ -60,7 +63,26 @@ const CallHistory: React.FC = () => {
       // Manual refresh fallback (uses storage wrapper)
       const calls = await import('../services/storageService').then(m => m.storage.getCallHistory(currentUser.uid));
       console.log(`Manual refresh loaded ${calls.length} calls`);
-      setCalls(calls);
+      let combined = calls || [];
+
+      // Also fetch any server-side persisted call records
+      try {
+        const resp = await fetch(`/api/call_history/${currentUser.uid}`);
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.records && data.records.length > 0) {
+            console.log('Loaded server-side call history records:', data.records.length);
+            // Merge, avoiding duplicates by callSid
+            const existingCallSids = new Set(combined.map(c => c.callSid));
+            const additional = data.records.filter((r: any) => !existingCallSids.has(r.callSid));
+            combined = [...additional, ...combined];
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch server-side call history:', err);
+      }
+
+      setCalls(combined);
     } catch (error) {
       console.error('Error loading call history (manual):', error);
     } finally {

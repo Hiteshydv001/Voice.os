@@ -117,20 +117,34 @@ app.get("/twiml", (req, res) => {
     }
 
     // Build TwiML with Stream parameters - pass callId via custom parameter
-    const twimlWithParams = callId 
-      ? `<?xml version="1.0" encoding="UTF-8"?>
+    if (callId) {
+      // Try to include a short TTS opening with the agent name or opening line so the callee hears the correct introduction immediately
+      const cfg = pendingCallConfigs.get(callId);
+      const openingSay = (cfg && (cfg.opening || cfg.name)) ? `${cfg.opening || `Hello, this is ${cfg.name}`}` : 'Connected';
+
+      const twimlWithParams = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say>Connected</Say>
+  <Say>${openingSay}</Say>
   <Connect>
     <Stream url="${wsUrl.toString()}">
       <Parameter name="callId" value="${callId}" />
     </Stream>
   </Connect>
   <Say>Disconnected</Say>
-</Response>`
-      : twimlTemplate.replace("{{WS_URL}}", wsUrl.toString());
+</Response>`;
 
-    res.type("text/xml").send(twimlWithParams);
+      res.type("text/xml").send(twimlWithParams);
+    } else {
+      const twimlWithParams = twimlTemplate.replace("{{WS_URL}}", wsUrl.toString());
+      res.type("text/xml").send(twimlWithParams);
+    }
+</Response>`;
+
+      res.type("text/xml").send(twimlWithParams);
+    } else {
+      const twimlWithParams = twimlTemplate.replace("{{WS_URL}}", wsUrl.toString());
+      res.type("text/xml").send(twimlWithParams);
+    }
   } catch (error) {
     console.error("Error generating TwiML:", error);
     res.status(500).send("Error generating TwiML");
@@ -161,19 +175,25 @@ app.post("/twiml", (req, res) => {
     }
 
     // Build TwiML with Stream parameters - pass callId via custom parameter
-    const twimlWithParams = callId 
-      ? `<?xml version="1.0" encoding="UTF-8"?>
+    if (callId) {
+      const cfg = pendingCallConfigs.get(callId);
+      const openingSay = (cfg && (cfg.opening || cfg.name)) ? `${cfg.opening || `Hello, this is ${cfg.name}`}` : 'Connected';
+
+      const twimlWithParams = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say>Connected</Say>
+  <Say>${openingSay}</Say>
   <Connect>
     <Stream url="${wsUrl.toString()}">
       <Parameter name="callId" value="${callId}" />
     </Stream>
   </Connect>
   <Say>Disconnected</Say>
-</Response>`
-      : twimlTemplate.replace("{{WS_URL}}", wsUrl.toString());
-    res.type("text/xml").send(twimlWithParams);
+</Response>`;
+      res.type("text/xml").send(twimlWithParams);
+    } else {
+      const twimlWithParams = twimlTemplate.replace("{{WS_URL}}", wsUrl.toString());
+      res.type("text/xml").send(twimlWithParams);
+    }
   } catch (error) {
     console.error("Error generating TwiML:", error);
     res.status(500).send("Error generating TwiML");
@@ -299,9 +319,7 @@ app.post("/api/twilio/recording-callback", async (req: Request, res: Response) =
   console.log(`   Recording URL: ${RecordingUrl}`);
   console.log(`   Duration: ${RecordingDuration}s`);
   
-  // Store this in a map so frontend can retrieve it
-  // In production, you'd update the database here
-
+  // Map to internal callId and any stored agent config
   const mappedCallId = callSidToCallId.get(CallSid);
   const config = mappedCallId ? pendingCallConfigs.get(mappedCallId) : undefined;
 
@@ -315,6 +333,61 @@ app.post("/api/twilio/recording-callback", async (req: Request, res: Response) =
     agentConfig: config || null
   };
 
+  // Persist call record server-side as a fallback when no client is connected
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const dataDir = path.join(process.cwd(), 'data');
+    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+
+    const userId = (config && config.userId) || 'unknown';
+    const filePath = path.join(dataDir, `call_history_${userId}.json`);
+    let existing = [];
+    try {
+      if (fs.existsSync(filePath)) {
+        const raw = fs.readFileSync(filePath, 'utf-8');
+        existing = JSON.parse(raw || '[]');
+      }
+    } catch (err) {
+      console.warn('Failed to read existing call history file:', err);
+    }
+
+    const callRecord = {
+      id: `srv_${Date.now()}_${Math.random().toString(36).substr(2,9)}`,
+      userId,
+      callSid: CallSid,
+      callId: mappedCallId,
+      agentName: config?.name || 'Unknown',
+      leadPhone: null,
+      callType: 'Manual',
+      campaignId: null,
+      campaignName: null,
+      status: 'Completed',
+      duration: Number(RecordingDuration) || 0,
+      timestamp: new Date().toISOString(),
+      startTime: new Date().toISOString(),
+      endTime: new Date().toISOString(),
+      script: { opening: config?.opening || '' },
+      aiModel: 'realtime',
+      sentiment: 'Neutral',
+      outcome: 'Call recorded',
+      notes: `Recording saved: ${RecordingSid}`,
+      recordingUrl: RecordingUrl,
+      recordingSid: RecordingSid
+    };
+
+    existing.unshift(callRecord);
+    try {
+      fs.writeFileSync(filePath, JSON.stringify(existing, null, 2), 'utf-8');
+      console.log('Saved call record to server data file:', filePath);
+    } catch (err) {
+      console.warn('Failed to write call history file:', err);
+    }
+  } catch (err) {
+    console.warn('Error persisting call record to server:', err);
+  }
+
+  // Notify connected frontend logs client if available
   try {
     if (currentLogs && currentLogs.readyState === WebSocket.OPEN) {
       currentLogs.send(JSON.stringify(notification));
@@ -331,6 +404,29 @@ app.post("/api/twilio/recording-callback", async (req: Request, res: Response) =
 
 // Get recording audio file - proxy through backend to avoid auth issues
 app.get("/api/twilio/recording/:callSid", async (req: Request, res: Response) => {
+  // Also support returning metadata from server-side stored call history if available
+  const { callSid } = req.params;
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const dataDir = path.join(process.cwd(), 'data');
+    if (fs.existsSync(dataDir)) {
+      const files = fs.readdirSync(dataDir).filter(f => f.startsWith('call_history_'));
+      for (const f of files) {
+        try {
+          const raw = fs.readFileSync(path.join(dataDir, f), 'utf-8');
+          const arr = JSON.parse(raw || '[]');
+          const found = arr.find((c: any) => c.callSid === callSid);
+          if (found) {
+            // Return metadata as JSON
+            return res.json({ found, source: 'server-file' });
+          }
+        } catch (err) {}
+      }
+    }
+  } catch (err) {
+    // ignore
+  }
   const { callSid } = req.params;
   
   if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
@@ -376,6 +472,26 @@ app.get("/api/twilio/recording/:callSid", async (req: Request, res: Response) =>
 // Demos API
 app.get('/api/demos', (_req, res) => {
   res.json({ demos: scheduledDemos });
+});
+
+// Server-side call history endpoint (returns persisted server records)
+app.get('/api/call_history/:userId', (req, res) => {
+  try {
+    const { userId } = req.params;
+    const fs = require('fs');
+    const path = require('path');
+    const dataDir = path.join(process.cwd(), 'data');
+    const filePath = path.join(dataDir, `call_history_${userId}.json`);
+    if (fs.existsSync(filePath)) {
+      const raw = fs.readFileSync(filePath, 'utf-8');
+      const arr = JSON.parse(raw || '[]');
+      return res.json({ records: arr });
+    }
+    return res.json({ records: [] });
+  } catch (err) {
+    console.error('Error reading server call history:', err);
+    return res.status(500).json({ error: 'Failed to read server call history' });
+  }
 });
 
 const updateDemo: express.RequestHandler = (req, res) => {

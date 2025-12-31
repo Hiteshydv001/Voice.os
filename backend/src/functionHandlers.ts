@@ -39,6 +39,8 @@ export interface ScheduledDemo {
   phone?: string;
   scheduled_at: string;
   status: 'pending' | 'completed' | 'cancelled';
+  // Optional timestamp when the demo was actually called/held
+  called_at?: string;
 }
 
 export const scheduledDemos: ScheduledDemo[] = [];
@@ -63,16 +65,21 @@ functions.push({
           type: "string",
           description: "The customer's email address",
         },
+        phone: {
+          type: "string",
+          description: "The customer's mobile phone number",
+        }
       },
       required: ["preferred_time"],
     },
   },
-  handler: async (args: { customer_name?: string; preferred_time: string; email?: string }) => {
+  handler: async (args: { customer_name?: string; preferred_time: string; email?: string; phone?: string }) => {
     const demo: ScheduledDemo = {
       id: `DEMO-${Date.now()}`,
       customer_name: args.customer_name,
       preferred_time: args.preferred_time,
       email: args.email,
+      phone: args.phone,
       scheduled_at: new Date().toISOString(),
       status: 'pending'
     };
@@ -84,6 +91,7 @@ functions.push({
     console.log("Customer:", args.customer_name || "Not provided");
     console.log("Preferred Time:", args.preferred_time);
     console.log("Email:", args.email || "Not provided");
+    console.log("Phone:", args.phone || "Not provided");
     console.log("Total Scheduled Demos:", scheduledDemos.length);
 
     return JSON.stringify({

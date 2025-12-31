@@ -1,4 +1,4 @@
-import { db } from './firebase';
+import { db, auth } from './firebase';
 import { doc, setDoc, getDoc, onSnapshot, Unsubscribe } from 'firebase/firestore';
 
 export interface DailyTrafficData {
@@ -188,6 +188,21 @@ export const subscribeToWeeklyTraffic = (
     return () => {};
   }
 
+  // Ensure the client is authenticated and matches the userId required by security rules
+  if (!auth.currentUser || auth.currentUser.uid !== userId) {
+    console.warn('subscribeToWeeklyTraffic: Authentication not ready or UID mismatch', { authUid: auth.currentUser?.uid, userId });
+    // Return empty data and a no-op unsubscribe; caller should retry after auth is ready
+    const days = initializeWeeklyData();
+    const emptyData = Object.entries(days).map(([name, data]) => ({
+      name,
+      calls: data.calls,
+      conversions: data.conversions,
+      date: data.date
+    }));
+    callback(emptyData);
+    return () => {};
+  }
+
   const weekStart = getWeekStart();
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekStart.getDate() + 6);
@@ -241,8 +256,12 @@ export const subscribeToWeeklyTraffic = (
     callback(chartData);
   }, (error) => {
     console.error('Error in traffic analytics subscription:', error);
-    console.error('Error code:', error.code);
-    console.error('Error message:', error.message);
+    if (error?.code === 'permission-denied') {
+      console.error('Permission denied: ensure the user is authenticated and Firestore rules allow access to users/{userId}/trafficAnalytics/{weekId}.');
+    } else {
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
+    }
     // Return empty data on error
     const days = initializeWeeklyData();
     const emptyData = Object.entries(days).map(([name, data]) => ({

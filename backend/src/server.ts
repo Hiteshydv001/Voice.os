@@ -356,7 +356,16 @@ const updateDemo: express.RequestHandler = (req, res) => {
   const demo = scheduledDemos.find(d => d.id === id);
   if (!demo) { res.status(404).json({ error: 'Demo not found' }); return; }
   const { status } = req.body;
-  if (status) demo.status = status;
+  if (status) {
+    demo.status = status;
+    // When a demo is marked completed, record the time it was called
+    if (status === 'completed') {
+      demo.called_at = new Date().toISOString();
+    } else if (status === 'cancelled') {
+      // Clear called_at when cancelled
+      demo.called_at = undefined;
+    }
+  }
   res.json({ success: true });
 };
 

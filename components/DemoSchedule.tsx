@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Calendar, User, Mail, Clock, CheckCircle, XCircle, Trash2, RefreshCw } from 'lucide-react';
+import { Calendar, User, Mail, Clock, Phone, CheckCircle, XCircle, Trash2, RefreshCw } from 'lucide-react';
 
 interface ScheduledDemo {
   id: string;
@@ -9,6 +9,7 @@ interface ScheduledDemo {
   phone?: string;
   scheduled_at: string;
   status: 'pending' | 'completed' | 'cancelled';
+  called_at?: string;
 }
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8081';
@@ -248,6 +249,20 @@ export default function DemoSchedule() {
                         <div className="flex items-center gap-2 text-black">
                           <Mail size={16} className="text-black shrink-0" />
                           <span className="text-sm sm:text-base">{demo.email}</span>
+                        </div>
+                      )}
+
+                      {demo.phone && (
+                        <div className="flex items-center gap-2 text-black">
+                          <Phone size={16} className="text-black shrink-0" />
+                          <span className="text-sm sm:text-base">{demo.phone}</span>
+                        </div>
+                      )}
+
+                      {demo.called_at && (
+                        <div className="flex items-center gap-2 text-black">
+                          <Clock size={16} className="text-black shrink-0" />
+                          <span className="text-sm sm:text-base">Demo called: {new Date(demo.called_at).toLocaleString()}</span>
                         </div>
                       )}
 

@@ -204,10 +204,13 @@ Tone: Professional, friendly, and concise.`,
       response: {
         modalities: ["text", "audio"],
         instructions: openingInstruction,
+      },
+    });
 
-  session.modelConn.on("message", handleModelMessage);
-  session.modelConn.on("error", closeModel);
-  session.modelConn.on("close", closeModel);
+    session.modelConn!.on("message", handleModelMessage);
+    session.modelConn!.on("error", closeModel);
+    session.modelConn!.on("close", closeModel);
+  });
 }
 
 function handleModelMessage(data: RawData) {

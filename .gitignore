@@ -49,6 +49,10 @@ firebase-debug.*.log
 **/credentials.json
 **/service-account*.json
 
+# Backend data files (contains sensitive call records, Twilio SIDs, etc.)
+backend/data/
+**/call_history_*.json
+
 # Testing
 coverage/
 .nyc_output/

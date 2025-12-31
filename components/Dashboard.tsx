@@ -76,6 +76,32 @@ const Dashboard: React.FC<DashboardProps> = ({ agents = [], logs = [], onAddLog 
 
     console.log('📊 Setting up real-time traffic analytics subscription for user:', currentUser.uid);
     
+    // Sync existing call history on mount
+    const syncHistory = async () => {
+      try {
+        const { db } = await import('../services/firebase');
+        const { collection, query, where, getDocs } = await import('firebase/firestore');
+        
+        const callsQuery = query(
+          collection(db, 'call_history'),
+          where('userId', '==', currentUser.uid)
+        );
+        
+        const snapshot = await getDocs(callsQuery);
+        const callRecords = snapshot.docs.map(doc => doc.data());
+        
+        if (callRecords.length > 0) {
+          const { syncCallHistoryToTraffic } = await import('../services/trafficAnalyticsService');
+          await syncCallHistoryToTraffic(currentUser.uid, callRecords as any);
+          console.log('📊 Initial call history synced to traffic analytics');
+        }
+      } catch (error) {
+        console.error('Error syncing initial call history:', error);
+      }
+    };
+    
+    syncHistory();
+    
     const unsubscribe = subscribeToWeeklyTraffic(currentUser.uid, (data) => {
       console.log('📊 Traffic data updated:', data);
       setChartData(data);

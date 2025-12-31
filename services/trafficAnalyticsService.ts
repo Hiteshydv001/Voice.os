@@ -382,3 +382,113 @@ export const trackConversion = async (userId: string) => {
     console.error('Error tracking conversion:', error);
   }
 };
+
+/**
+ * Sync call history with traffic analytics for current week
+ * This backfills traffic data from existing call records
+ * @param userId - The user's ID
+ * @param callRecords - Array of call history records
+ */
+export const syncCallHistoryToTraffic = async (
+  userId: string,
+  callRecords: Array<{ timestamp: string; status?: string }>
+): Promise<void> => {
+  if (!userId || !callRecords || callRecords.length === 0) {
+    return;
+  }
+
+  try {
+    const weekStart = getWeekStart();
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
+
+    console.log(`📊 Syncing traffic for week: ${weekStart.toDateString()} to ${weekEnd.toDateString()}`);
+    console.log(`📊 Current date: ${new Date().toDateString()}`);
+    console.log(`📊 Total calls to process: ${callRecords.length}`);
+
+    // Filter calls from current week only
+    const currentWeekCalls = callRecords.filter(call => {
+      const callDate = new Date(call.timestamp);
+      const isInWeek = callDate >= weekStart && callDate <= weekEnd;
+      console.log(`📊 Call from ${callDate.toISOString()} (${callDate.toDateString()}): ${isInWeek ? 'IN WEEK' : 'OUT OF WEEK'}`);
+      return isInWeek;
+    });
+
+    console.log(`📊 Calls in current week: ${currentWeekCalls.length}`);
+
+    if (currentWeekCalls.length === 0) {
+      console.log('📊 No calls found in current week for traffic sync');
+      // Still initialize empty week data
+      const docRef = getWeekDocRef(userId);
+      const docSnap = await getDoc(docRef);
+      
+      if (!docSnap.exists()) {
+        const newWeekData: WeeklyTrafficData = {
+          userId,
+          weekStart: weekStart.toISOString(),
+          weekEnd: weekEnd.toISOString(),
+          days: initializeWeeklyData(),
+          lastUpdated: new Date().toISOString()
+        };
+        await setDoc(docRef, newWeekData);
+        console.log('📊 Initialized empty week data');
+      }
+      return;
+    }
+
+    // Group calls by day
+    const callsByDay: Map<keyof WeeklyTrafficData['days'], number> = new Map();
+    
+    currentWeekCalls.forEach(call => {
+      const callDate = new Date(call.timestamp);
+      const dayName = getDayName(callDate);
+      callsByDay.set(dayName, (callsByDay.get(dayName) || 0) + 1);
+    });
+
+    // Update traffic data
+    const docRef = getWeekDocRef(userId);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
+      // Create new week data with synced calls
+      const newWeekData: WeeklyTrafficData = {
+        userId,
+        weekStart: weekStart.toISOString(),
+        weekEnd: weekEnd.toISOString(),
+        days: initializeWeeklyData(),
+        lastUpdated: new Date().toISOString()
+      };
+
+      callsByDay.forEach((count, dayName) => {
+        newWeekData.days[dayName].calls = count;
+      });
+
+      await setDoc(docRef, newWeekData);
+      console.log(`✅ Traffic synced: Created new week with ${currentWeekCalls.length} calls`);
+    } else {
+      // Merge with existing data
+      const data = docSnap.data() as WeeklyTrafficData;
+
+      callsByDay.forEach((count, dayName) => {
+        if (!data.days[dayName]) {
+          const dayDate = new Date(weekStart);
+          dayDate.setDate(dayDate.getDate() + ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].indexOf(dayName));
+          data.days[dayName] = {
+            calls: 0,
+            conversions: 0,
+            date: formatDate(dayDate)
+          };
+        }
+        // Update calls to match actual count (don't increment, set to actual)
+        data.days[dayName].calls = count;
+      });
+
+      data.lastUpdated = new Date().toISOString();
+      await setDoc(docRef, data);
+      console.log(`✅ Traffic synced: Updated week with ${currentWeekCalls.length} calls`);
+    }
+  } catch (error) {
+    console.error('Error syncing call history to traffic:', error);
+  }
+};

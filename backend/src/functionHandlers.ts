@@ -49,31 +49,31 @@ functions.push({
   schema: {
     name: "schedule_demo",
     type: "function",
-    description: "Schedule a product demo with the customer. Call this immediately when the user provides a specific date or time.",
+    description: "Schedule a product demo with the customer. Call this immediately when the user provides their name, email, and preferred time. Always ask for the customer's name and email before scheduling.",
     parameters: {
       type: "object",
       properties: {
         customer_name: {
           type: "string",
-          description: "The customer's name",
+          description: "The customer's full name (REQUIRED - ask if not provided)",
+        },
+        email: {
+          type: "string",
+          description: "The customer's email address (REQUIRED - ask if not provided)",
         },
         preferred_time: {
           type: "string",
           description: "The time the user requested (e.g., 'Next Tuesday at 4 PM')",
         },
-        email: {
-          type: "string",
-          description: "The customer's email address",
-        },
         phone: {
           type: "string",
-          description: "The customer's mobile phone number",
+          description: "The customer's phone number (OPTIONAL - only include if customer volunteers it)",
         }
       },
-      required: ["preferred_time"],
+      required: ["customer_name", "email", "preferred_time"],
     },
   },
-  handler: async (args: { customer_name?: string; preferred_time: string; email?: string; phone?: string }) => {
+  handler: async (args: { customer_name: string; email: string; preferred_time: string; phone?: string }) => {
     const demo: ScheduledDemo = {
       id: `DEMO-${Date.now()}`,
       customer_name: args.customer_name,

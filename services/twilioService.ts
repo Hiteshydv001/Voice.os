@@ -47,7 +47,8 @@ export const makeOutboundCall = async (to: string, agent: Agent, userId?: string
       agentScript: {
         opening: replaceAgentNameInScript(agent.script.opening, agent.name),
         goal: agent.goal,
-        tone: agent.tone
+        tone: agent.tone,
+        productDescription: agent.productDescription // ← Add product/profession info
       }
     };
     

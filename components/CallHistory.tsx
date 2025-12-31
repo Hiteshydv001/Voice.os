@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../services/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { Phone, Clock, FileText, PlayCircle, Download, Filter, Search, Calendar, TrendingUp, AlertCircle, CheckCircle, XCircle, Terminal } from 'lucide-react';
 import { CallHistoryRecord } from '../types';
 import { getRecordingUrl, downloadRecording } from '../services/recordingService';
@@ -17,33 +17,43 @@ const CallHistory: React.FC = () => {
 
   useEffect(() => {
     if (!currentUser) return;
-    loadCallHistory();
+
+    setLoading(true);
+    console.log('Subscribing to call_history for user:', currentUser.uid);
+
+    const callsQuery = query(
+      collection(db, 'call_history'),
+      where('userId', '==', currentUser.uid)
+    );
+
+    // Real-time listener so UI updates immediately when new calls are saved
+    const unsubscribe = onSnapshot(callsQuery, (snapshot) => {
+      const callRecords = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as CallHistoryRecord[];
+      callRecords.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      console.log(`Loaded ${callRecords.length} call records from snapshot`);
+      setCalls(callRecords);
+      setLoading(false);
+    }, (err) => {
+      console.error('Call history snapshot error:', err);
+      setLoading(false);
+    });
+
+    return () => {
+      console.log('Unsubscribing from call_history listener');
+      unsubscribe();
+    };
   }, [currentUser]);
 
   const loadCallHistory = async () => {
     if (!currentUser) return;
-    
+    setLoading(true);
     try {
-      setLoading(true);
-      const callsQuery = query(
-        collection(db, 'call_history'),
-        where('userId', '==', currentUser.uid)
-      );
-      
-      const snapshot = await getDocs(callsQuery);
-      const callRecords = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as CallHistoryRecord[];
-      
-      // Sort by timestamp descending (newest first)
-      callRecords.sort((a, b) => 
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      );
-      
-      setCalls(callRecords);
+      // Manual refresh fallback (uses storage wrapper)
+      const calls = await import('../services/storageService').then(m => m.storage.getCallHistory(currentUser.uid));
+      console.log(`Manual refresh loaded ${calls.length} calls`);
+      setCalls(calls);
     } catch (error) {
-      console.error('Error loading call history:', error);
+      console.error('Error loading call history (manual):', error);
     } finally {
       setLoading(false);
     }
@@ -216,6 +226,12 @@ Recording URL: ${call.recordingUrl || 'Not available'}
           <div className="text-right">
             <div className="text-3xl font-black text-black">{calls.length}</div>
             <div className="text-xs text-stone-600 font-bold uppercase">Total Calls</div>
+            <button
+              onClick={loadCallHistory}
+              className="mt-2 text-xs px-3 py-1 border-2 border-black bg-white font-bold uppercase hover:bg-stone-100 transition-colors"
+            >
+              Refresh
+            </button>
           </div>
         </div>
       </div>

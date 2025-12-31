@@ -396,15 +396,17 @@ app.post("/api/twilio/recording-callback", async (req: Request, res: Response) =
 });
 
 // Get recording audio file - proxy through backend to avoid auth issues
-app.get("/api/twilio/recording/:callSid", async (req: Request, res: Response) => {
+import type { RequestHandler } from 'express';
+
+const getRecordingHandler: RequestHandler = async (req, res) => {
   // Also support returning metadata from server-side stored call history if available
-  const { callSid } = req.params;
+  const { callSid } = req.params as { callSid: string };
   try {
     const fs = require('fs');
     const path = require('path');
     const dataDir = path.join(process.cwd(), 'data');
     if (fs.existsSync(dataDir)) {
-      const files = fs.readdirSync(dataDir).filter(f => f.startsWith('call_history_'));
+      const files: string[] = fs.readdirSync(dataDir).filter((f: string) => f.startsWith('call_history_'));
       for (const f of files) {
         try {
           const raw = fs.readFileSync(path.join(dataDir, f), 'utf-8');
@@ -459,7 +461,9 @@ app.get("/api/twilio/recording/:callSid", async (req: Request, res: Response) =>
     console.error("Error fetching recording:", error);
     res.status(500).json({ error: error.message });
   }
-});
+};
+
+app.get("/api/twilio/recording/:callSid", getRecordingHandler);
 
 // Demos API
 app.get('/api/demos', (_req, res) => {
@@ -467,9 +471,9 @@ app.get('/api/demos', (_req, res) => {
 });
 
 // Server-side call history endpoint (returns persisted server records)
-app.get('/api/call_history/:userId', (req, res) => {
+const getServerCallHistory: RequestHandler = (req, res) => {
   try {
-    const { userId } = req.params;
+    const { userId } = req.params as { userId: string };
     const fs = require('fs');
     const path = require('path');
     const dataDir = path.join(process.cwd(), 'data');
@@ -484,7 +488,9 @@ app.get('/api/call_history/:userId', (req, res) => {
     console.error('Error reading server call history:', err);
     return res.status(500).json({ error: 'Failed to read server call history' });
   }
-});
+};
+
+app.get('/api/call_history/:userId', getServerCallHistory);
 
 const updateDemo: express.RequestHandler = (req, res) => {
   const id = req.params.id as string;

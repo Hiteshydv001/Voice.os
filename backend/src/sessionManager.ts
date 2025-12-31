@@ -11,11 +11,13 @@ interface Session {
   responseStartTimestamp?: number;
   latestMediaTimestamp?: number;
   openAIApiKey?: string;
+  callerPhoneNumber?: string; // Store caller's phone number
   agentConfig?: {
     name: string;
     opening: string;
     goal?: string;
     tone?: string;
+    productDescription?: string; // ← Add profession/product description
   };
   pendingCallConfigs?: Map<string, any>; // Reference to pending configs
 
@@ -81,6 +83,8 @@ async function handleFunctionCall(item: { name: string; arguments: string }) {
     });
   }
 
+  // No longer auto-filling phone - agent should ask the customer for their contact info
+
   try {
     console.log("Calling function:", fnDef.schema.name, args);
     const result = await fnDef.handler(args as any);
@@ -104,6 +108,25 @@ function handleTwilioMessage(data: RawData) {
       session.latestMediaTimestamp = 0;
       session.lastAssistantItem = undefined;
       session.responseStartTimestamp = undefined;
+
+      // Try to extract caller's phone number from various possible locations
+      console.log('🔍 Attempting to extract phone number from start event...');
+      console.log('msg.start.customParameters:', msg.start?.customParameters);
+      console.log('msg.start.custom_parameters:', msg.start?.custom_parameters);
+      console.log('msg.start.parameters:', msg.start?.parameters);
+      
+      const callerNumber = msg.start?.customParameters?.From || 
+                          msg.start?.custom_parameters?.From ||
+                          msg.start?.parameters?.From ||
+                          msg.start?.From ||
+                          (msg.start?.callSid ? undefined : undefined); // Will be undefined if not found
+      
+      if (callerNumber) {
+        session.callerPhoneNumber = callerNumber;
+        console.log('✅ Captured caller phone number:', callerNumber);
+      } else {
+        console.log('❌ Could not find caller phone number in start event');
+      }
 
       // Extract callId from start parameters (if provided) and load pending agent config
       try {
@@ -134,8 +157,14 @@ function handleTwilioMessage(data: RawData) {
               opening: cfg.opening || cfg.agentScript?.opening || '',
               goal: cfg.goal || cfg.agentScript?.goal,
               tone: cfg.tone || cfg.agentScript?.tone,
+              productDescription: cfg.productDescription || cfg.agentScript?.productDescription || '', // ← Load profession/product
               userId: cfg.userId
             } as any;
+            // Also capture the caller's phone number from the config
+            if (cfg.callerPhone) {
+              session.callerPhoneNumber = cfg.callerPhone;
+              console.log('✅ Loaded caller phone from config:', cfg.callerPhone);
+            }
             console.log('Loaded agent config for callId', callId, session.agentConfig);
           } else {
             console.warn('No pending call config found for callId', callId);
@@ -195,7 +224,21 @@ function tryConnectModel() {
 
     // If agentConfig is set from the pending call, use that name/instructions; otherwise fall back to default
     const agentName = session.agentConfig?.name || 'Voice Rep';
-    const openingInstruction = session.agentConfig?.opening || `Hello! This is ${agentName} from Voice Marketing AI. How are you doing today?`;
+    const agentTone = session.agentConfig?.tone || 'Professional & Friendly';
+    const agentGoal = session.agentConfig?.goal || 'appointment';
+    const productDescription = session.agentConfig?.productDescription || 'voice AI solutions for marketing and sales';
+    const openingInstruction = session.agentConfig?.opening || `Hello! This is ${agentName}. How are you doing today?`;
+
+    // Map goal to instructions
+    const goalInstructions = {
+      'appointment': `Your goal is to briefly explain the value of ${productDescription}, then schedule a 15-minute demo or appointment. If someone asks about a demo video or wants to see a preview, share this link: https://youtu.be/5Cb7tLv5Rko`,
+      'product_demo': `Your goal is to explain the benefits of ${productDescription} and schedule a product demonstration. You can share our demo video at https://youtu.be/5Cb7tLv5Rko if they want to see it first.`,
+      'lead_qualification': `Your goal is to qualify the lead by understanding their needs related to ${productDescription}. If interested, you can show them our demo at https://youtu.be/5Cb7tLv5Rko`,
+      'survey': `Your goal is to conduct a brief survey about ${productDescription} and collect customer feedback.`,
+      'default': `Your goal is to have a helpful conversation about ${productDescription} and assist the customer. Our demo video is available at https://youtu.be/5Cb7tLv5Rko if they want to learn more.`
+    };
+
+    const goalInstruction = goalInstructions[agentGoal as keyof typeof goalInstructions] || goalInstructions.default;
 
     jsonSend(session.modelConn, {
       type: "session.update",
@@ -206,49 +249,41 @@ function tryConnectModel() {
         tools: functions.map((f) => f.schema),
         tool_choice: "auto",
         instructions: `You are ${agentName}. Use this exact name when introducing yourself and NEVER substitute it with generic phrases like "Voice Rep" or "Sales Representative".
-Goal: Briefly explain the value of voice AI for marketing and sales, then try to schedule a 15-minute demo.
+
+${goalInstruction}
+
+Product Demo Link: https://youtu.be/5Cb7tLv5Rko - Share this link when customers ask about demos, videos, or want to see the product in action.
+
 Behavior:
 - Always use the exact agent opening line provided and include the agent's name exactly as given
 - Keep responses short and conversational (1-2 sentences max)
+- If customer asks "do you have a demo?" or "can I see it?", say "Yes! You can watch our demo at youtube dot com slash watch question mark v equals 5 C b 7 t L v 5 R k o"
 - Ask if they'd like to schedule a demo
-- If they agree (yes, ok, sure, sounds good, etc.), ask when works best for them
-- When they provide a specific time, IMMEDIATELY call the schedule_demo tool
-- After booking, confirm the appointment time
+
+IMPORTANT - Before scheduling a demo, you MUST collect:
+1. Customer's full name - Ask: "May I have your name please?"
+2. Customer's email address - Ask: "What's the best email to send the confirmation to?"
+3. Preferred time - Ask: "When would be a good time for you?"
+4. Phone number (OPTIONAL) - Only collect if customer volunteers it. Do NOT ask for phone number unless customer offers it.
+
+- When you have name, email, and time, IMMEDIATELY call the schedule_demo tool
+- After booking, confirm: "Perfect! I've scheduled a demo for [time]. You'll receive a confirmation at [email]. Looking forward to speaking with you, [name]!"
+
 Important: Under NO circumstances should you produce text or audio in the voice of the customer or any third party. You must only speak as the agent (${agentName}). Do NOT simulate the customer's reply or generate audio that pretends to be the other party. If you need to reason about a customer's reply, do so internally or in non-audio text only.
-Tone: Professional, friendly, and concise.`,
+
+Tone: ${agentTone}`,
         ...config,
       },
     });
 
     console.log('Using opening instruction for model:', openingInstruction);
 
-    // Commit the opening as an explicit assistant message first so the model's context contains the exact text
-    jsonSend(session.modelConn, {
-      type: "conversation.item.create",
-      item: {
-        type: "message",
-        role: "assistant",
-        content: [{ type: "output_text", text: openingInstruction }],
-      },
-    });
-
-    // Primary opening: ask model to speak the prepared opening line
+    // Send the opening instruction once as a response - the model will speak it naturally
     jsonSend(session.modelConn, {
       type: "response.create",
       response: {
         modalities: ["text", "audio"],
-        instructions: openingInstruction,
-      },
-    });
-
-    // Forceful clarification to ensure the model uses the agent's exact name and never substitutes a generic title
-    const forceOpening = `Repeat the following opening line exactly, verbatim: "${openingInstruction.replace(/"/g, '\\"')}". Do NOT replace the agent's name with any generic phrase such as "Voice Rep", "Sales Representative", or similar. From now on, always use the agent's exact name (${agentName}) when introducing yourself.`;
-
-    jsonSend(session.modelConn, {
-      type: "response.create",
-      response: {
-        modalities: ["text", "audio"],
-        instructions: forceOpening,
+        instructions: `Speak this opening line naturally: "${openingInstruction}"`,
       },
     });
 

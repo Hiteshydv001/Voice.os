@@ -102,11 +102,20 @@ app.get("/twiml", (req, res) => {
       return;
     }
     
-    // Get CallSid from Twilio request
+    // Get CallSid and From (caller's phone number) from Twilio request
     const twilioCallSid = req.query.CallSid as string;
+    const callerPhone = req.query.From as string; // ← This is the caller's phone number!
     const callId = req.query.callId as string || (twilioCallSid ? callSidToCallId.get(twilioCallSid) : undefined);
     
-    console.log(`📞 TwiML request received (GET). Twilio CallSid: ${twilioCallSid}, Our callId: ${callId}`);
+    console.log(`📞 TwiML request received (GET). Twilio CallSid: ${twilioCallSid}, Caller: ${callerPhone}, Our callId: ${callId}`);
+    
+    // Store the caller's phone number if we have a callId
+    if (callId && callerPhone) {
+      const config = pendingCallConfigs.get(callId) || {};
+      config.callerPhone = callerPhone;
+      pendingCallConfigs.set(callId, config);
+      console.log(`📞 Stored caller phone ${callerPhone} for callId ${callId}`);
+    }
     
     const wsUrl = new URL(PUBLIC_URL);
     wsUrl.protocol = "wss:";
@@ -118,13 +127,9 @@ app.get("/twiml", (req, res) => {
 
     // Build TwiML with Stream parameters - pass callId via custom parameter
     if (callId) {
-      // Try to include a short TTS opening with the agent name or opening line so the callee hears the correct introduction immediately
-      const cfg = pendingCallConfigs.get(callId);
-      const openingSay = (cfg && (cfg.opening || cfg.name)) ? `${cfg.opening || `Hello, this is ${cfg.name}`}` : 'Connected';
-
+      // Don't use TTS Say - let the AI agent introduce itself
       const twimlWithParams = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say>${openingSay}</Say>
   <Connect>
     <Stream url="${wsUrl.toString()}">
       <Parameter name="callId" value="${callId}" />
@@ -153,11 +158,20 @@ app.post("/twiml", (req, res) => {
       return;
     }
     
-    // Get CallSid from Twilio request
+    // Get CallSid and From (caller's phone number) from Twilio request
     const twilioCallSid = req.query.CallSid as string || req.body?.CallSid;
+    const callerPhone = req.query.From as string || req.body?.From; // ← Get caller's phone!
     const callId = req.query.callId as string || (twilioCallSid ? callSidToCallId.get(twilioCallSid) : undefined);
     
-    console.log(`📞 TwiML request received (POST). Twilio CallSid: ${twilioCallSid}, Our callId: ${callId}`);
+    console.log(`📞 TwiML request received (POST). Twilio CallSid: ${twilioCallSid}, Caller: ${callerPhone}, Our callId: ${callId}`);
+    
+    // Store the caller's phone number if we have a callId
+    if (callId && callerPhone) {
+      const config = pendingCallConfigs.get(callId) || {};
+      config.callerPhone = callerPhone;
+      pendingCallConfigs.set(callId, config);
+      console.log(`📞 Stored caller phone ${callerPhone} for callId ${callId}`);
+    }
     
     const wsUrl = new URL(PUBLIC_URL);
     wsUrl.protocol = "wss:";
@@ -169,12 +183,9 @@ app.post("/twiml", (req, res) => {
 
     // Build TwiML with Stream parameters - pass callId via custom parameter
     if (callId) {
-      const cfg = pendingCallConfigs.get(callId);
-      const openingSay = (cfg && (cfg.opening || cfg.name)) ? `${cfg.opening || `Hello, this is ${cfg.name}`}` : 'Connected';
-
+      // Don't use TTS Say - let the AI agent introduce itself with consistent voice
       const twimlWithParams = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say>${openingSay}</Say>
   <Connect>
     <Stream url="${wsUrl.toString()}">
       <Parameter name="callId" value="${callId}" />
@@ -268,6 +279,7 @@ app.post("/api/twilio/call", async (req: Request, res: Response) => {
         opening: agentScript.opening,
         goal: agentScript.goal || "assist the customer",
         tone: agentScript.tone || "Professional and friendly",
+        productDescription: agentScript.productDescription || "", // ← Store profession/product info
       };
       if (req.body.userId) config.userId = req.body.userId;
 

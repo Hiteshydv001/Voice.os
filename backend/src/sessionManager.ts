@@ -93,6 +93,7 @@ function handleTwilioMessage(data: RawData) {
 
   switch (msg.event) {
     case "start":
+      console.log('Twilio stream START event:', JSON.stringify(msg.start || msg, null, 2));
       session.streamSid = msg.start.streamSid;
       session.latestMediaTimestamp = 0;
       session.lastAssistantItem = undefined;
@@ -117,9 +118,12 @@ function handleTwilioMessage(data: RawData) {
               name: cfg.name || cfg.agentName || cfg.agent?.name || 'Voice Rep',
               opening: cfg.opening || cfg.agentScript?.opening || '',
               goal: cfg.goal || cfg.agentScript?.goal,
-              tone: cfg.tone || cfg.agentScript?.tone
-            };
+              tone: cfg.tone || cfg.agentScript?.tone,
+              userId: cfg.userId
+            } as any;
             console.log('Loaded agent config for callId', callId, session.agentConfig);
+          } else {
+            console.warn('No pending call config found for callId', callId);
           }
         }
       } catch (err) {
@@ -230,6 +234,8 @@ function handleModelMessage(data: RawData) {
           session.responseStartTimestamp = session.latestMediaTimestamp || 0;
         }
         if (event.item_id) session.lastAssistantItem = event.item_id;
+
+        console.log('Forwarding audio delta to Twilio (item_id=' + event.item_id + ', bytes=' + (event.delta ? event.delta.length : 0) + ')');
 
         jsonSend(session.twilioConn, {
           event: "media",

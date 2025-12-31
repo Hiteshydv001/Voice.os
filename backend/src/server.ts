@@ -250,12 +250,14 @@ app.post("/api/twilio/call", async (req: Request, res: Response) => {
     
     // Store agent configuration for this call
     if (agentName && agentScript) {
-      const config = {
+      const config: any = {
         name: agentName,
         opening: agentScript.opening,
         goal: agentScript.goal || "assist the customer",
-        tone: agentScript.tone || "Professional and friendly"
+        tone: agentScript.tone || "Professional and friendly",
       };
+      if (req.body.userId) config.userId = req.body.userId;
+
       pendingCallConfigs.set(callId, config);
       console.log(`📦 Stored agent config for callId ${callId}:`, config);
       
@@ -299,6 +301,31 @@ app.post("/api/twilio/recording-callback", async (req: Request, res: Response) =
   
   // Store this in a map so frontend can retrieve it
   // In production, you'd update the database here
+
+  const mappedCallId = callSidToCallId.get(CallSid);
+  const config = mappedCallId ? pendingCallConfigs.get(mappedCallId) : undefined;
+
+  const notification = {
+    type: 'call.recording',
+    callSid: CallSid,
+    callId: mappedCallId,
+    recordingUrl: RecordingUrl,
+    recordingSid: RecordingSid,
+    duration: RecordingDuration,
+    agentConfig: config || null
+  };
+
+  try {
+    if (currentLogs && currentLogs.readyState === WebSocket.OPEN) {
+      currentLogs.send(JSON.stringify(notification));
+      console.log('Sent call.recording notification to connected logs client for callSid', CallSid);
+    } else {
+      console.log('No logs websocket connected to send call.recording notification');
+    }
+  } catch (err) {
+    console.warn('Failed to send call recording notification over logs websocket:', err);
+  }
+
   res.sendStatus(200);
 });
 

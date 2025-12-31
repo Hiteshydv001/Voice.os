@@ -11,7 +11,7 @@ const replaceAgentNameInScript = (script: string, agentName: string): string => 
   });
 };
 
-export const makeOutboundCall = async (to: string, agent: Agent) => {
+export const makeOutboundCall = async (to: string, agent: Agent, userId?: string) => {
   // Check if Twilio is configured via backend
   try {
     const checkResponse = await fetch(`${BACKEND_URL}/api/twilio`, {
@@ -57,7 +57,7 @@ export const makeOutboundCall = async (to: string, agent: Agent) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
       // Include agent metadata so backend can pass it into the realtime session
-      body: JSON.stringify({ to, from, agentName: agent.name, agentScript: agentConfig.agentScript }),
+      body: JSON.stringify({ to, from, agentName: agent.name, agentScript: agentConfig.agentScript, userId }),
     });
 
     if (!callResponse.ok) {

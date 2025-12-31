@@ -345,8 +345,32 @@ export const storage = {
       };
       await setDoc(callDocRef, payload);
       console.log('Call history saved:', callDocRef.id, 'for user:', userId, 'payload:', payload);
+
+      // Also persist to localStorage as a fallback so UI can show entries when Firestore is inaccessible
+      try {
+        const key = getUserKey('callHistory', userId);
+        const existing = JSON.parse(localStorage.getItem(key) || '[]') as CallHistoryRecord[];
+        existing.unshift(payload);
+        localStorage.setItem(key, JSON.stringify(existing));
+        console.log('Call history also saved to localStorage with key:', key);
+      } catch (err) {
+        console.warn('Failed to save call history to localStorage:', err);
+      }
+
     } catch (error) {
       console.error('Error saving call history:', error);
+
+      // On Firestore error, still persist to localStorage as a fallback
+      try {
+        const key = getUserKey('callHistory', userId);
+        const existing = JSON.parse(localStorage.getItem(key) || '[]') as CallHistoryRecord[];
+        const fallback = { ...call, id: `local_${Date.now()}`, userId, timestamp: call.timestamp || new Date().toISOString(), createdAt: new Date().toISOString() };
+        existing.unshift(fallback);
+        localStorage.setItem(key, JSON.stringify(existing));
+        console.log('Call history saved to localStorage as fallback with key:', key);
+      } catch (err) {
+        console.warn('Failed to save call history to localStorage fallback:', err);
+      }
     }
   },
 
@@ -369,9 +393,31 @@ export const storage = {
         new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
       );
       
+      if (calls.length === 0) {
+        // Try localStorage fallback
+        try {
+          const key = getUserKey('callHistory', userId);
+          const local = JSON.parse(localStorage.getItem(key) || '[]') as CallHistoryRecord[];
+          if (local && local.length > 0) {
+            console.log('Loaded call history from localStorage fallback with key:', key);
+            return local;
+          }
+        } catch (err) {
+          console.warn('Failed to load call history from localStorage:', err);
+        }
+      }
+
       return calls;
     } catch (error) {
       console.error('Error loading call history:', error);
+      try {
+        const key = getUserKey('callHistory', userId);
+        const local = JSON.parse(localStorage.getItem(key) || '[]') as CallHistoryRecord[];
+        console.log('Loaded call history from localStorage fallback due to error:', key);
+        return local;
+      } catch (err) {
+        console.warn('Failed to load call history from localStorage fallback:', err);
+      }
       return [];
     }
   },

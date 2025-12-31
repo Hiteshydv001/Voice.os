@@ -67,6 +67,55 @@ const AppContent: React.FC = () => {
         setLeads(leadsData);
         setCampaigns(campaignsData);
         setLogs(logsData);
+
+        // Attempt to listen for server-side call notifications (recording events)
+        try {
+          const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+          const wsUrl = `${wsProtocol}://${window.location.host}/logs`;
+          const logsWs = new WebSocket(wsUrl);
+          logsWs.onopen = () => console.log('Connected to server logs websocket:', wsUrl);
+          logsWs.onmessage = async (evt) => {
+            try {
+              const data = JSON.parse(evt.data);
+              console.log('Received logs websocket event:', data);
+              if (data.type === 'call.recording' && data.agentConfig) {
+                // Build a call history record and save using storage service
+                const callRecord = {
+                  id: `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                  userId: data.agentConfig.userId || currentUser.uid,
+                  callSid: data.callSid,
+                  agentId: data.agentConfig.id || null,
+                  agentName: data.agentConfig.name || 'Unknown',
+                  leadPhone: 'Unknown',
+                  callType: 'Manual',
+                  campaignId: null,
+                  campaignName: null,
+                  status: 'Completed',
+                  duration: Number(data.duration) || 0,
+                  timestamp: new Date().toISOString(),
+                  startTime: new Date().toISOString(),
+                  endTime: new Date().toISOString(),
+                  script: data.agentConfig.agentScript || {},
+                  aiModel: 'realtime',
+                  sentiment: 'Neutral',
+                  outcome: 'Recording available',
+                  notes: `Recording saved: ${data.recordingSid}`,
+                  recordingUrl: data.recordingUrl
+                };
+
+                await import('./services/storageService').then(m => m.storage.saveCallHistory(currentUser.uid, callRecord as any));
+                // Refresh call history if currently on that page
+                setLogs(prev => [...prev, { id: Date.now(), action: 'Call Recorded', timestamp: new Date().toISOString(), details: `Call ${data.callSid} recorded` } as any]);
+              }
+            } catch (err) {
+              console.error('Error handling logs websocket message:', err);
+            }
+          };
+        logsWs.onclose = () => console.log('Server logs websocket closed');
+        } catch (err) {
+          console.warn('Failed to connect to server logs websocket:', err);
+        }
+
       } else {
         // Clear data if no user (e.g. logout)
         console.log('No user, clearing data');
@@ -266,7 +315,7 @@ const AppContent: React.FC = () => {
             // Perform the call with agent's custom script
             const callStartTime = Date.now();
             const callStartTimeISO = new Date().toISOString();
-            const callResponse = await makeOutboundCall(lead.phone, selectedAgent);
+            const callResponse = await makeOutboundCall(lead.phone, selectedAgent, uid);
             const callDuration = Math.floor((Date.now() - callStartTime) / 1000);
 
             // Record successful call result

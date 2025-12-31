@@ -208,6 +208,7 @@ Behavior:
 - If they agree (yes, ok, sure, sounds good, etc.), ask when works best for them
 - When they provide a specific time, IMMEDIATELY call the schedule_demo tool
 - After booking, confirm the appointment time
+Important: Under NO circumstances should you produce text or audio in the voice of the customer or any third party. You must only speak as the agent (${agentName}). Do NOT simulate the customer's reply or generate audio that pretends to be the other party. If you need to reason about a customer's reply, do so internally or in non-audio text only.
 Tone: Professional, friendly, and concise.`,
         ...config,
       },
@@ -310,12 +311,15 @@ function handleModelMessage(data: RawData) {
         break;
       }
 
-      // If the model finished producing an output item with text, sanitize names
+      // If the model finished producing an output item with text, sanitize names and detect disallowed customer-role replies
       try {
         const agentName = session.agentConfig?.name || 'Unit';
         // Attempt to extract text if present
         const textContent = (item.content && Array.isArray(item.content) && item.content[0]?.text) ? item.content[0].text : null;
         if (textContent) {
+          // Log for diagnostics so we can see what the model produced
+          console.log(`Model output (item_id=${item.item_id || 'unknown'}):`, textContent);
+
           const sanitized = textContent
             .replace(/\bJames\b/gi, agentName)
             .replace(/\b(Voice Rep|Voice Representative|Sales Rep|Sales Representative|Senior Sales Rep|Voice\.OS Rep|Voice OS Rep)\b/gi, agentName)
@@ -330,6 +334,37 @@ function handleModelMessage(data: RawData) {
                 response: {
                   modalities: ["text", "audio"],
                   instructions: sanitized,
+                },
+              });
+            }
+          }
+
+          // Detect if the model spoke as the customer (heuristic)
+          const lower = textContent.toLowerCase();
+          const greetsAgent = new RegExp(`^(hello|hi|hey)\s*,?\s*${agentName.toLowerCase()}`);
+          const customerIndicators = /(interested|schedule|demo|how about next week|sounds good|i'm interested|i am interested|would love to)/i;
+
+          if (greetsAgent.test(lower) || customerIndicators.test(lower)) {
+            // The model appears to be speaking as the customer - log and issue a corrective instruction
+            console.warn('Detected likely customer-role output from model; issuing corrective instruction and preventing further customer-role speech');
+
+            if (session.modelConn) {
+              // Add an explicit assistant message committing the role rule
+              jsonSend(session.modelConn, {
+                type: "conversation.item.create",
+                item: {
+                  type: "message",
+                  role: "assistant",
+                  content: [{ type: "output_text", text: `Do NOT simulate or speak as the customer. You must only speak as the agent ${agentName}. Stop generating any customer-role text or audio.` }],
+                },
+              });
+
+              // Also send a response.create to explicitly tell the model to stop producing that behavior
+              jsonSend(session.modelConn, {
+                type: "response.create",
+                response: {
+                  modalities: ["text"],
+                  instructions: `Stop generating speech as the customer. From now on, only produce agent responses as ${agentName}.`,
                 },
               });
             }

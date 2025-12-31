@@ -169,7 +169,7 @@ const LandingPage: React.FC = () => {
             {[
               { key: 'product', title: 'Product Demo', subtitle: 'Full walkthrough of the live demo', videoId: 'nrDoF9bg6jU' }
             ].map((v) => (
-              <div key={v.key} className="relative bg-black text-white border-4 border-black p-4 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
+              <div key={v.key} className="relative bg-black text-white border-4 border-black p-4 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] md:col-span-2 md:max-w-3xl md:mx-auto">
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h3 className="text-xl font-bold uppercase">{v.title}</h3>

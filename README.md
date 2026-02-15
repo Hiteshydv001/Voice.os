@@ -1,12 +1,23 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
-
 # AI Voice Marketing Platform
 
 A comprehensive AI-powered voice marketing platform that enables businesses to create intelligent voice agents, manage campaigns, and make automated outbound calls at scale. Built with React, TypeScript, Firebase, OpenAI Realtime API, and Twilio.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1I-MQLB4kTDFaHgV36fCh3Kuyrrw6m1ZW
+## 🎥 Demo & Introduction
+
+### ▶️ Intro Video
+[![Watch the Intro](https://img.youtube.com/vi/nrDoF9bg6jU/hqdefault.jpg)](https://youtu.be/nrDoF9bg6jU)
+---
+### ▶️ Full Demo Walkthrough
+[![Watch the Demo](https://img.youtube.com/vi/5Cb7tLv5Rko/hqdefault.jpg)](https://youtu.be/5Cb7tLv5Rko)
+
+A complete walkthrough demonstrating:
+
+- AI voice agent creation & configuration  
+- Real-time call handling & live transcription  
+- Campaign execution & monitoring  
+- Lead management workflow  
+- Automated voice interactions in action  
+---
 
 ## 🌟 Features
 
